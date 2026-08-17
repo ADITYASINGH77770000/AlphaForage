@@ -6,20 +6,28 @@
 <br/>
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.35%2B-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Tests](https://img.shields.io/badge/Tests-176%20passing-00f5a0?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
 [![License](https://img.shields.io/badge/License-MIT-00C2FF?style=for-the-badge)](LICENSE)
 [![Demo](https://img.shields.io/badge/Demo%20Mode-Enabled%20by%20Default-success?style=for-the-badge&logo=rocket)](README.md)
 
 <br/>
 
-> **AlphaForge** is a full-stack, research-grade quantitative trading platform combining real-time market analytics, multi-model ML price prediction, factor investing, regime detection, and portfolio optimization — all in a blazing-fast dark-mode Streamlit dashboard backed by a FastAPI REST layer.
+> **AlphaForge is the quant platform that tells you the truth.**
+>
+> Most backtests lie. Tune a strategy long enough against the same history and you will always find a beautiful equity curve — one that evaporates the moment real money touches it. AlphaForge exists to catch that before you do: it tests strategies with real costs and unseen data, then delivers a blunt verdict on whether the edge is real or an overfit illusion.
+>
+> Underneath is a research-grade engine — alpha signals, ML forecasting, factor investing, regime detection, portfolio optimisation and risk analytics — served through **two front ends** that share one Python core: a **Next.js 14 web portal** and the original **Streamlit dashboard**.
 
 <br/>
 
 ```
-📡 Live Alpha Signals   •   🧠 ML Forecasting   •   🔁 Walk-Forward Backtests
-📊 Factor Attribution   •   🌐 Regime Detection  •   ⚠️ Risk Management
+🎯 Honesty Engine       •   📡 Live Alpha Signals  •   🧠 ML Forecasting
+🔁 Walk-Forward Tests   •   📊 Factor Attribution  •   🌐 Regime Detection
+⚠️ Risk Management      •   💼 Portfolio Optimiser •   🔐 Account Portal
 ```
 
 </div>
@@ -52,6 +60,53 @@
 *Run locally and explore — no API keys required in Demo Mode.*
 
 </div>
+
+---
+
+## 🎯 The Honesty Engine
+
+The feature the whole platform is named for. Every backtest is put through checks that most retail tools quietly skip, then reduced to one of three verdicts you cannot argue with.
+
+| Check | What it answers | Reference |
+|-------|-----------------|-----------|
+| **Probabilistic Sharpe (PSR)** | Is this Sharpe distinguishable from zero, given skew and kurtosis? | Bailey & López de Prado (2012) |
+| **Deflated Sharpe (DSR)** | Does it survive the fact that you tried many configurations? | Bailey & López de Prado (2014) |
+| **PBO via CSCV** | If you picked the best in-sample, how often is it below median out-of-sample? | Bailey et al. (2017) |
+| **Blow-up check** | Does the equity curve contain a ruinous drawdown? | — |
+| **Beats buy & hold** | Net of real costs, did it actually beat doing nothing? | — |
+
+```
+PROBABLY REAL   →  the edge survives deflation and out-of-sample testing
+LIKELY OVERFIT  →  it looks good only because you searched until it did
+INCONCLUSIVE    →  not enough evidence either way — keep testing
+```
+
+> The engine is deliberately additive: `core/honesty.py` reads results, it never changes how any existing metric is calculated.
+
+---
+
+## 🌐 The Web Portal
+
+A **Next.js 14 + TypeScript** portal (`frontend/`) sits alongside the Streamlit app, sharing the same Python engine through a same-origin `/api/*` proxy — so no backend host is ever baked into the client bundle.
+
+- **Account-gated** — sign up / sign in, bcrypt-hashed passwords, opaque session tokens stored only as SHA-256 digests, httpOnly cookie
+- **Nine feature modules** — every one wired to the real engine, no mock data anywhere
+- **Runs on demand** — modules never fetch on mount; you press Run, so a page load never triggers a 50-second computation
+- **Marketing + research pages** — home, features, about, and long-form insight articles with charts generated from the engine itself
+- **Forge, the guide bot** — a first-visit welcome and per-module spotlight tours
+- **3D hero** — a WebGL particle field (`ForgeScene`), client-only with low-power tiers
+
+| Module | Route | What it runs |
+|--------|-------|--------------|
+| 🎯 Honesty Engine | `/features/honesty-engine` | DSR, PSR, PBO and the verdict |
+| 📊 Dashboard | `/features/dashboard` | Price action, momentum, full risk picture |
+| 🔁 Backtester | `/features/backtester` | Costs, walk-forward, Monte Carlo, regime matrix |
+| ⚡ Signals | `/features/signals` | Alpha signals, health, crowding |
+| ⚠️ Risk | `/features/risk` | VaR/CVaR across methods, GARCH, Kupiec |
+| 💼 Portfolio | `/features/portfolio` | Efficient frontier, risk parity, contributions |
+| 🧮 Factors | `/features/factors` | IC, quintiles, attribution, crowding, decay |
+| 🌐 Regime | `/features/regime` | HMM states, rolling refit, conditional Sharpe |
+| 🧠 Prediction | `/features/prediction` | ARIMA, GARCH and the ML Prediction Studio |
 
 ---
 
@@ -145,15 +200,36 @@ Real-time watchlist with portfolio-level metrics computed on every load:
 ```
 AlphaForge-main/
 │
+├── 📁 frontend/                     # Next.js 14 web portal (TypeScript + Tailwind)
+│   ├── 📁 app/                      # App Router routes
+│   │   ├── page.tsx                 # Home — hero, feature rows, insights
+│   │   ├── features/                # /features + /features/[slug] module routes
+│   │   ├── insights/[slug]/         # Long-form research articles
+│   │   ├── login/ · signup/         # The only routes reachable signed out
+│   │   └── layout.tsx               # AuthProvider → SiteGate → GuideBot
+│   ├── 📁 components/
+│   │   ├── modules/                 # The 9 engine-backed feature modules
+│   │   ├── auth/                    # AuthProvider, SiteGate, RequireAuth, AuthForm
+│   │   ├── guide/                   # Forge, the onboarding guide bot
+│   │   ├── Hero.tsx · ForgeScene.tsx  # Landing hero + WebGL particle field
+│   │   └── Marketing.tsx · FeaturesPage.tsx · AboutPage.tsx
+│   ├── 📁 lib/
+│   │   ├── api.ts                   # Typed client for the Python API
+│   │   └── insights.ts              # Article content
+│   ├── 📁 public/shots/             # Real screenshots of the running modules
+│   └── next.config.mjs              # /api/* → FastAPI rewrite (same-origin)
+│
 ├── 📁 api/                          # FastAPI REST layer
-│   └── server.py                    # All endpoints (wraps core/ — no logic duplication)
+│   ├── server.py                    # All endpoints (wraps core/ — no logic duplication)
+│   ├── auth.py                      # Accounts + sessions (bcrypt, hashed tokens)
+│   ├── prediction_jobs.py           # Async job+poll for long ML trains
+│   └── portfolio_analytics.py       # Portfolio endpoints backing the module
 │
 ├── 📁 app/                          # Streamlit frontend
 │   ├── main.py                      # 📡 Command Center (home page)
 │   ├── data_engine.py               # Cached multi-ticker data loader
 │   ├── shared.py                    # Shared Streamlit helpers
 │   ├── run.py                       # App launcher
-│   ├── ui_v2.py                     # UI v2 layout engine
 │   │
 │   ├── 📁 pages/                    # Streamlit multi-page nav
 │   │   ├── 01_Dashboard.py          # 📊  Factor heatmaps & correlation
@@ -182,6 +258,7 @@ AlphaForge-main/
 │   ├── portfolio_opt.py             # Monte Carlo frontier, risk parity, CVaR opt
 │   ├── regime_detector.py           # 6-upgrade HMM regime detector
 │   ├── alerts.py                    # Alert engine (price, regime, risk, prediction)
+│   ├── honesty.py                   # 🎯 PSR, Deflated Sharpe, PBO → honest verdict
 │   │
 │   └── 📁 prediction/               # Modular ML prediction pipeline
 │       ├── __init__.py
@@ -198,17 +275,23 @@ AlphaForge-main/
 │   ├── theme.py                     # Neuroscience-driven dark UI engine
 │   └── logo.svg                     # AlphaForge brand mark
 │
-├── 📁 tests/                        # pytest test suite
+├── 📁 tests/                        # pytest test suite — 176 passing
 │   ├── test_alpha_engine.py
 │   ├── test_backtest.py
 │   ├── test_data_engine.py
 │   ├── test_graph_features.py
+│   ├── test_honesty.py
 │   ├── test_indicators.py
 │   ├── test_metrics.py
 │   ├── test_prediction_backend.py
 │   └── test_api_compat.py
 │
+├── 📁 scripts/                      # Dev tooling
+│   ├── capture_shots.py             # Re-capture real module screenshots via CDP
+│   └── make_insight_charts.py       # Generate insight article charts from the engine
+│
 ├── 📁 data/
+│   ├── auth/                        # Local account store — gitignored, never commit
 │   └── exports/                     # Alert logs, PDF reports output
 │
 ├── 📁 .streamlit/
@@ -270,6 +353,30 @@ python -m streamlit run app/main.py
 
 > ⚠️ **Windows tip**: Always use `python -m streamlit run app/main.py` (not bare `streamlit run`) to ensure the correct venv interpreter is used.
 
+### Option 3 — The Web Portal (Next.js)
+
+The portal needs **two processes**: the Python API, and the Next dev server that proxies to it.
+
+```bash
+# Terminal 1 — the engine (must be running first)
+python -m uvicorn api.server:app --host 127.0.0.1 --port 8000
+
+# Terminal 2 — the portal
+cd frontend
+npm install
+npm run dev
+```
+
+Then open **http://localhost:3000**. Create an account on first visit — the portal is private, and `/login` and `/signup` are the only pages reachable signed out.
+
+| Surface | URL | Command |
+|---------|-----|---------|
+| Web portal | http://localhost:3000 | `cd frontend && npm run dev` |
+| REST API + Swagger | http://localhost:8000/docs | `python -m uvicorn api.server:app --port 8000` |
+| Streamlit dashboard | http://localhost:8501 | `python -m streamlit run app/main.py` |
+
+> 💡 The first compile of a 3D page takes 30–50s. `npx tsc --noEmit` is the fast correctness check.
+
 ---
 
 ## 🔌 Backend API
@@ -282,7 +389,28 @@ uvicorn api.server:app --host 0.0.0.0 --port 8000
 start_api.bat
 ```
 
-## Deployment
+Interactive docs at **http://localhost:8000/docs** (Swagger UI). The API is a thin wrapper around `core/` — zero logic duplication. Every endpoint delegates to the same Python functions powering the Streamlit pages.
+
+**Endpoint groups** (~60 routes):
+
+| Group | Examples |
+|-------|----------|
+| Auth | `POST /api/auth/signup` · `login` · `logout` · `GET /api/auth/me` |
+| Market data | `GET /api/ohlcv/{t}` · `returns` · `indicators` · `metrics` · `graphs` · `audit` |
+| Honesty | `GET /api/honesty/{t}` |
+| Backtest | `POST /api/backtest` · `full` · `walkforward` · `montecarlo` · `regime-matrix` |
+| Signals | `GET /api/signals/{t}` · `POST /api/signals/alpha` · `health` · `crowding` |
+| Risk | `GET /api/risk/{t}` · `methods` · `garch` · `kupiec` · `POST /api/risk/portfolio` |
+| Portfolio | `POST /api/portfolio/frontier` · `full` · `frontier-analytic` · `risk-parity` |
+| Factors | `POST /api/factors` · `quintile` · `regime` · `attribution` · `crowding` · `decay` |
+| Regime | `POST /api/regime/{t}` · `rolling/{t}` · `GET /api/macro/regime` |
+| Prediction | `POST /api/prediction/arima` · `garch` · `lstm` · `studio/train` (async job+poll) |
+
+> ⏱️ **Long-running work uses jobs, not requests.** A Prediction Studio train takes minutes, far past any proxy or serverless timeout, so it submits a job and the client polls `GET /api/prediction/studio/jobs/{id}`.
+
+## 🚢 Deployment
+
+> ℹ️ The configs below deploy the **Python surfaces** (Streamlit on Render, FastAPI on Vercel). The Next.js portal is a separate deployment: build `frontend/` on any Node host and point its `API_URL` env var at your deployed FastAPI service.
 
 ### Render
 
@@ -300,7 +428,7 @@ Deploy steps:
 
 1. Push the repo to GitHub.
 2. In Render, create a new Blueprint service from the repository.
-3. Confirm the service uses the generated `quantedge-streamlit` web app.
+3. Confirm the service uses the web app generated from `render.yaml`.
 4. Add any optional secrets in Render environment variables.
 5. Deploy and open the generated URL.
 
@@ -311,11 +439,9 @@ long-running Streamlit dashboard.
 
 - Vercel now supports FastAPI on its Python runtime and can deploy a root
   `index.py` app entrypoint.
-- This repo includes [index.py](/d:/AlphaForge-refactored/AlphaForge-main/index.py)
-  as a thin Vercel entrypoint that re-exports the existing
-  [api/server.py](/d:/AlphaForge-refactored/AlphaForge-main/api/server.py) app.
-- The Vercel config lives in
-  [vercel.json](/d:/AlphaForge-refactored/AlphaForge-main/vercel.json).
+- This repo includes [index.py](index.py) as a thin Vercel entrypoint that
+  re-exports the existing [api/server.py](api/server.py) app.
+- The Vercel config lives in [vercel.json](vercel.json).
 
 Expected result on Vercel:
 
@@ -383,111 +509,9 @@ Community Cloud docs:
 - https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy
 - https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management
 
-## Demo Mode
-Interactive docs available at **http://localhost:8000/docs** (Swagger UI).
+## 🟢 Demo Mode
 
-## Deployment
-
-### Render
-
-This repo is configured for Streamlit deployment on Render through
-`render.yaml`.
-
-- The Render service installs `requirements-core.txt` to avoid the heavy
-  TensorFlow and PyTorch stack during web deployment.
-- `DEMO_MODE=true` is the default deployment setting so the app can boot
-  without external market or email credentials.
-- If you want live integrations, add your real environment variables in the
-  Render dashboard instead of committing them to `.env.example`.
-
-Deploy steps:
-
-1. Push the repo to GitHub.
-2. In Render, create a new Blueprint service from the repository.
-3. Confirm the service uses the generated `quantedge-streamlit` web app.
-4. Add any optional secrets in Render environment variables.
-5. Deploy and open the generated URL.
-
-### Vercel
-
-Vercel is suitable for the FastAPI backend in this repo, not for the
-long-running Streamlit dashboard.
-
-- Vercel now supports FastAPI on its Python runtime and can deploy a root
-  `index.py` app entrypoint.
-- This repo includes `index.py` as a thin Vercel entrypoint that re-exports
-  the existing `api/server.py` app.
-- The Vercel config lives in `vercel.json`.
-
-Expected result on Vercel:
-
-- Your API routes will be live.
-- The Streamlit UI in `app/main.py` will not be the deployed Vercel frontend.
-
-Deploy steps:
-
-1. Push the repo to GitHub.
-2. Import the repository into Vercel.
-3. Let Vercel detect the Python project and deploy it.
-4. Add any optional environment variables in the Vercel dashboard.
-5. Open the generated deployment URL and test routes such as `/docs`.
-
-### Streamlit Community Cloud
-
-This repo is a better fit for Streamlit Community Cloud than Vercel because
-the main product here is the Streamlit app itself.
-
-- Community Cloud deploys from a GitHub repository and lets you choose the
-  entrypoint file.
-- Community Cloud supports choosing a Python version in Advanced settings.
-- Secrets should be pasted into the deployment dialog instead of committed to
-  the repo.
-
-Recommended app entrypoint:
-
-- `app/main.py`
-
-Dependency file used by Community Cloud for that entrypoint:
-
-- `app/requirements.txt`
-
-Recommended deployment settings:
-
-- Python version: `3.11`
-- Secrets: only if you want live integrations; demo mode can run without them
-
-Suggested secrets for this project:
-
-```toml
-DEMO_MODE = "true"
-LOG_LEVEL = "INFO"
-CACHE_TTL_SECONDS = "3600"
-GMAIL_SENDER = "your_email@gmail.com"
-GMAIL_PASSWORD = "your_app_password"
-GMAIL_RECEIVER = "alerts@example.com"
-NEWS_API_KEY = "your_news_api_key"
-GEMINI_API_KEY = "your_gemini_api_key"
-ALPACA_API_KEY = "your_alpaca_key"
-ALPACA_SECRET_KEY = "your_alpaca_secret"
-ALPACA_BASE_URL = "https://paper-api.alpaca.markets"
-```
-
-Deploy steps:
-
-1. Push the repo to GitHub.
-2. Go to `share.streamlit.io` and click `Create app`.
-3. Choose your repository, branch, and the file path `app/main.py`.
-4. In `Advanced settings`, select Python `3.11`.
-5. Paste secrets only if needed, then deploy.
-
-Community Cloud docs:
-
-- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy
-- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management
-
-## Demo Mode
-
-The API is a thin wrapper around `core/` — zero logic duplication. Every endpoint delegates directly to the same Python functions powering the Streamlit pages.
+`DEMO_MODE=true` is the default. The entire platform — both front ends, every module and all ~60 endpoints — runs on synthetic data with **no API keys and no network access required**. Set it to `false` in `.env` to pull live data from yfinance.
 
 ---
 
@@ -539,8 +563,12 @@ CACHE_TTL_SECONDS=3600
 
 ```bash
 source venv/bin/activate   # Windows: venv\Scripts\activate
-python -m pytest tests/ -v
+python -m pytest tests/ -q          # 176 passing
+
+cd frontend && npx tsc --noEmit     # frontend type check
 ```
+
+> ⚠️ Always target `tests/`. Running bare `pytest` from the repo root picks up `utils/test_email.py`, a manual SMTP script that calls `sys.exit(1)`.
 
 | Test File | Coverage |
 |-----------|---------|
@@ -548,6 +576,7 @@ python -m pytest tests/ -v
 | `test_backtest.py` | Vectorised engine, cost model, walk-forward |
 | `test_data_engine.py` | OHLCV loading, alignment, caching |
 | `test_graph_features.py` | All 7 graph analytics (relative strength, volume profile, etc.) |
+| `test_honesty.py` | PSR, Deflated Sharpe, PBO/CSCV, verdict thresholds |
 | `test_indicators.py` | RSI, MACD, Bollinger, ATR, Momentum |
 | `test_metrics.py` | Sharpe, Sortino, VaR, CVaR, CAGR, IC, ICIR |
 | `test_prediction_backend.py` | Chronological split, XGBoost, fallback |
@@ -561,14 +590,23 @@ python -m pytest tests/ -v
 ┌─────────────────────────────────────────────────────────────────┐
 │                         USER INTERFACES                         │
 │                                                                 │
-│  ┌─────────────────────────┐    ┌──────────────────────────┐   │
-│  │   Streamlit Dashboard   │    │   FastAPI REST Endpoints  │   │
-│  │   (app/main.py +        │    │   (api/server.py)         │   │
-│  │    app/pages/*.py)      │    │   /docs  → Swagger UI     │   │
-│  └────────────┬────────────┘    └────────────┬─────────────┘   │
-└───────────────┼─────────────────────────────┼─────────────────┘
-                │           calls              │
-                ▼                             ▼
+│  ┌─────────────────────────┐    ┌──────────────────────────┐    │
+│  │   Next.js Web Portal    │    │   Streamlit Dashboard    │    │
+│  │   (frontend/, :3000)    │    │   (app/, :8501)          │    │
+│  │   9 modules · account   │    │   Command Center +       │    │
+│  │   gated · runs on demand│    │   11 multi-page tabs     │    │
+│  └────────────┬────────────┘    └────────────┬─────────────┘    │
+│               │ /api/* rewrite               │ direct import    │
+└───────────────┼──────────────────────────────┼─────────────────┘
+                ▼                              │
+┌─────────────────────────────────────────────┐│
+│            FastAPI REST LAYER               ││
+│            (api/server.py, :8000)           ││
+│   auth.py · prediction_jobs.py              ││
+│   portfolio_analytics.py · /docs Swagger    ││
+└───────────────┬─────────────────────────────┘│
+                │            calls             │
+                ▼                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                        CORE ENGINE LAYER                        │
 │                                                                 │
@@ -576,6 +614,7 @@ python -m pytest tests/ -v
 │  factor_engine.py   portfolio_opt.py      prediction/           │
 │  metrics.py         indicators.py         graph_features.py     │
 │  data.py            alerts.py             models.py             │
+│  honesty.py  ← 🎯 the verdict layer, reads results only         │
 └───────────────────────────────┬─────────────────────────────────┘
                                 │
                                 ▼
@@ -589,7 +628,9 @@ python -m pytest tests/ -v
 
 ---
 
-## 📈 Pages Overview
+## 📈 Streamlit Pages Overview
+
+*(For the Next.js portal's nine modules, see [The Web Portal](#-the-web-portal) above.)*
 
 | # | Page | Key Features |
 |---|------|-------------|
@@ -647,6 +688,9 @@ portfolio_stats(weights, returns)                  # Return / vol / Sharpe for a
 
 | Signal / Method | Reference |
 |----------------|-----------|
+| Probabilistic Sharpe Ratio | Bailey & López de Prado (2012) — *The Sharpe Ratio Efficient Frontier*, Journal of Risk |
+| Deflated Sharpe Ratio | Bailey & López de Prado (2014) — *The Deflated Sharpe Ratio*, Journal of Portfolio Management |
+| Probability of Backtest Overfitting | Bailey, Borwein, López de Prado & Zhu (2017) — *The Probability of Backtest Overfitting*, Journal of Computational Finance |
 | Order Flow Imbalance | Kolm et al. (2023) — *Deep Order Flow Imbalance*, Mathematical Finance |
 | Factor Crowding | Hua & Sun (2024); Khandani & Lo (2007) |
 | IV Skew Signal | Höfler (2024) |
@@ -670,9 +714,12 @@ portfolio_stats(weights, returns)                  # Return / vol / Sharpe for a
 
 **Code conventions:**
 - Core logic lives in `core/` only — no Streamlit imports in backend
+- The API and both front ends are **thin**: they present results, they never compute them
 - All config via `.env` — never hardcode credentials
 - New signals must include a literature reference and limitation disclosure
 - Vectorised operations preferred over Python loops
+- Frontend modules **run on demand** — never fetch on mount
+- Anything that can exceed ~25s must use the job+poll pattern, not a plain request
 
 ---
 
