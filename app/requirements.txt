@@ -1,0 +1,4 @@
+# Streamlit Community Cloud checks the app entrypoint directory for dependency
+# files before falling back to the repository root. Since this app is deployed
+# from `app/main.py`, keep a lean, Streamlit-safe dependency entrypoint here.
+-r ../requirements-core.txt
