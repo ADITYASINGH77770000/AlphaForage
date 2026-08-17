@@ -73,7 +73,7 @@ except ImportError:
             )
 
 
-st.set_page_config(page_title="Prediction | QuantEdge", layout="wide")
+st.set_page_config(page_title="Prediction | AlphaForge", layout="wide")
 from app.shared import apply_theme
 apply_theme()
 st.title("Prediction Studio")

@@ -631,7 +631,7 @@ def _call_gemini_regime_explainer(context: dict) -> str:
 # PAGE SETUP
 # ══════════════════════════════════════════════════════════════════════════════
 
-st.set_page_config(page_title="Regime | QuantEdge", layout="wide")
+st.set_page_config(page_title="Regime | AlphaForge", layout="wide")
 from app.shared import apply_theme
 apply_theme()
 st.title("🔀 Market Regime Detection")

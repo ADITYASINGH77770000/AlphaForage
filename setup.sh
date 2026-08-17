@@ -1,11 +1,11 @@
 #!/bin/bash
-# ── QuantEdge Setup Script (Linux / macOS) ────────────────────────────────────
+# ── AlphaForge Setup Script (Linux / macOS) ────────────────────────────────────
 # Run once: bash setup.sh
 
 set -e
 
 echo "========================================"
-echo "  QuantEdge — Setup Script"
+echo "  AlphaForge — Setup Script"
 echo "========================================"
 
 # 1. Create virtual environment

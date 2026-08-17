@@ -1,5 +1,5 @@
 """
-run.py  —  QuantEdge Multi-Page Entry Point
+run.py  —  AlphaForge Multi-Page Entry Point
 ────────────────────────────────────────────────────────────────────────────
 Run:  streamlit run run.py
 
@@ -15,7 +15,7 @@ from app.ui_pages._shared import DARK_CSS
 from utils.config import cfg
 
 st.set_page_config(
-    page_title="QuantEdge",
+    page_title="AlphaForge",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -25,7 +25,7 @@ st.markdown(DARK_CSS, unsafe_allow_html=True)
 
 demo_pill = '<span class="qe-demo-pill">DEMO</span>' if cfg.DEMO_MODE else ""
 st.sidebar.markdown(
-    f'<div class="qe-logo">📊 QuantEdge {demo_pill}</div>',
+    f'<div class="qe-logo">📊 AlphaForge {demo_pill}</div>',
     unsafe_allow_html=True,
 )
 st.sidebar.caption("Institutional Quant Research Platform")
@@ -34,7 +34,7 @@ st.sidebar.divider()
 st.markdown("""
 <div style="text-align:center; padding:40px 0 20px 0;">
   <div style="font-size:52px; margin-bottom:8px;">📊</div>
-  <h1 style="font-size:32px; font-weight:700; color:#e8ecf4; margin:0;">QuantEdge</h1>
+  <h1 style="font-size:32px; font-weight:700; color:#e8ecf4; margin:0;">AlphaForge</h1>
   <p style="color:#5a6180; font-size:16px; margin-top:8px;">Institutional Quant Research Platform</p>
 </div>
 """, unsafe_allow_html=True)
@@ -66,4 +66,4 @@ streamlit run run.py
 """, language="bash")
 
 st.divider()
-st.caption("QuantEdge — Streamlit · Plotly · yFinance · TensorFlow")
+st.caption("AlphaForge — Streamlit · Plotly · yFinance · TensorFlow")

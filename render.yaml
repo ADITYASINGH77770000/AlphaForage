@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: quantedge-streamlit
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements-core.txt"
+    startCommand: "python -m streamlit run app/main.py --server.address 0.0.0.0 --server.port $PORT --server.headless true"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DEMO_MODE
+        value: "true"
+      - key: CACHE_TTL_SECONDS
+        value: "3600"
+      - key: LOG_LEVEL
+        value: "INFO"

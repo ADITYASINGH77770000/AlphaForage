@@ -1,5 +1,5 @@
 """
-app/pages/08_portfolio.py — QuantEdge Portfolio Optimizer (Quant Grade)
+app/pages/08_portfolio.py — AlphaForge Portfolio Optimizer (Quant Grade)
 ═══════════════════════════════════════════════════════════════════════
 All original portfolio logic preserved exactly.
 
@@ -913,7 +913,7 @@ def _call_gemini_explainer(context: dict) -> str:
 # PAGE SETUP
 # ══════════════════════════════════════════════════════════════════════════════
 
-st.set_page_config(page_title="Portfolio | QuantEdge", layout="wide")
+st.set_page_config(page_title="Portfolio | AlphaForge", layout="wide")
 from app.shared import apply_theme
 apply_theme()
 st.title("Portfolio Optimizer — Quant Grade")

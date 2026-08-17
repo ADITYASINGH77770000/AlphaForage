@@ -1,6 +1,6 @@
 
 """
-app/pages/06_signals.py — QuantEdge Unified Alpha Signal Dashboard
+app/pages/06_signals.py — AlphaForge Unified Alpha Signal Dashboard
 ═══════════════════════════════════════════════════════════════════
 All original signal logic preserved exactly.
 
@@ -509,7 +509,7 @@ def _call_gemini_explainer(context: dict) -> str:
 # PAGE SETUP (unchanged)
 # ─────────────────────────────────────────────────────────────────────────────
 
-st.set_page_config(page_title="Signals | QuantEdge", layout="wide")
+st.set_page_config(page_title="Signals | AlphaForge", layout="wide")
 from app.shared import apply_theme
 apply_theme()
 st.title("📡 Unified Alpha Signal Dashboard")

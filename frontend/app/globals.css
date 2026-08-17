@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+html,
+body {
+  background: #05070f;
+  color: #e8f4fd;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Molten gradient text used for the wordmark + accents */
+.forge-text {
+  background: linear-gradient(90deg, #00f5a0, #0be0ff, #a55efd, #0be0ff, #00f5a0);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 5s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: 220% center;
+  }
+}
+
+/* ── Hover system, matched to the reference site's IX2 timings ─────────────
+   Its MOUSE_OVER / MOUSE_OUT actions run at 700ms "ease", moving between
+   scale 1 / opacity 1 and scale 0.9 / opacity 0.5. So: hovering one card
+   lifts it while its siblings recede.                                        */
+.hv {
+  transition: transform 0.7s ease, opacity 0.7s ease, border-color 0.7s ease,
+    box-shadow 0.7s ease, background-color 0.7s ease;
+  will-change: transform, opacity;
+}
+.hv:hover {
+  transform: translateY(-6px) scale(1.015);
+}
+
+/* Container: hovering any card dims its siblings.
+   These target the inner `.hv` cards rather than the container's direct
+   children, because those children are framer-motion wrappers whose inline
+   opacity/transform would otherwise win over these rules. */
+.hv-group:hover .hv {
+  opacity: 0.45;
+  transform: scale(0.97);
+}
+.hv-group:hover .hv:hover {
+  opacity: 1;
+  transform: translateY(-6px) scale(1.03);
+}
+
+/* Nav / inline links: sliding underline. */
+.hv-link {
+  position: relative;
+  transition: color 0.7s ease;
+}
+.hv-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  height: 1px;
+  width: 0;
+  background: currentColor;
+  transition: width 0.7s ease;
+}
+.hv-link:hover::after {
+  width: 100%;
+}
+
+/* Buttons. */
+.hv-btn {
+  transition: transform 0.7s ease, box-shadow 0.7s ease, background-color 0.7s ease,
+    border-color 0.7s ease, opacity 0.7s ease;
+}
+.hv-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hv:hover,
+  .hv-group:hover > *,
+  .hv-group:hover > *:hover,
+  .hv-btn:hover {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.035;
+  background-image: radial-gradient(#ffffff 0.5px, transparent 0.5px);
+  background-size: 3px 3px;
+}
+
+/* Thin custom scrollbar */
+::-webkit-scrollbar {
+  width: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(#0be0ff55, #a55efd55);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-track {
+  background: #05070f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Shared input styling for the auth forms. */
+.af-input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(5, 7, 15, 0.6);
+  padding: 0.6rem 0.75rem;
+  font-size: 14px;
+  color: #ffffff;
+  outline: none;
+  transition: border-color 0.18s ease;
+}
+.af-input::placeholder { color: rgba(138, 166, 200, 0.5); }
+.af-input:focus { border-color: rgba(255, 255, 255, 0.4); }

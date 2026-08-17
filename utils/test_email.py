@@ -19,7 +19,7 @@ from utils.config import cfg
 from utils.notifications import send_email, build_alert_body, build_alert_body_html
 
 print("=" * 55)
-print("QuantEdge Email Diagnostics")
+print("AlphaForge Email Diagnostics")
 print("=" * 55)
 print(f"GMAIL_SENDER    : {'✅ ' + cfg.GMAIL_SENDER if cfg.GMAIL_SENDER else '❌ NOT SET'}")
 print(f"GMAIL_PASSWORD  : {'✅ SET (hidden)' if cfg.GMAIL_PASSWORD else '❌ NOT SET'}")
@@ -33,11 +33,11 @@ if not cfg.GMAIL_SENDER or not cfg.GMAIL_PASSWORD:
     sys.exit(1)
 
 print("Sending test email...")
-plain = build_alert_body("TEST", "Diagnostics", 0, 0, "This is a test email from QuantEdge diagnostics script.")
-html  = build_alert_body_html("TEST", "Diagnostics", 0, 0, "This is a test email from QuantEdge diagnostics script.", level="INFO")
+plain = build_alert_body("TEST", "Diagnostics", 0, 0, "This is a test email from AlphaForge diagnostics script.")
+html  = build_alert_body_html("TEST", "Diagnostics", 0, 0, "This is a test email from AlphaForge diagnostics script.", level="INFO")
 
 ok, reason = send_email(
-    subject="QuantEdge — Email Test",
+    subject="AlphaForge — Email Test",
     body=plain,
     html_body=html,
 )

@@ -1,7 +1,7 @@
 """
 app/ui_pages/_shared.py
 ──────────────────────────────────────────────────────────────────────────────
-Shared utilities imported by every QuantEdge page:
+Shared utilities imported by every AlphaForge page:
   - DARK_CSS       : full dark theme injected once per page
   - apply_theme()  : call at top of every page
   - _start_str()   : global start date from session state
