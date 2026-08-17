@@ -93,7 +93,7 @@
 """
 core/alerts.py
 ──────────────────────────────────────────────────────────────────────────────
-Production-grade AlertEngine for QuantEdge.
+Production-grade AlertEngine for AlphaForge.
 
 Upgrades over the original:
   1. COOLDOWN REGISTRY      — per-type TTL prevents alert storms
@@ -465,7 +465,7 @@ class AlertEngine:
             for a in alerts:
                 if a["level"] in _EMAIL_LEVELS:
                     send_email(
-                        subject=f"QuantEdge {a['level']}: {a['type']} Alert",
+                        subject=f"AlphaForge {a['level']}: {a['type']} Alert",
                         body=build_alert_body(
                             ticker=a.get("ticker", "N/A"),
                             metric=a["type"],

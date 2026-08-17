@@ -208,5 +208,11 @@
     "message": "Bear probability falling (9.44%) \u2014 possible regime recovery",
     "level": "MEDIUM",
     "timestamp": "2026-04-27T09:02:21"
+  },
+  {
+    "type": "Performance",
+    "message": "Sharpe ratio deteriorated to -0.01 (min=1.0)",
+    "level": "MEDIUM",
+    "timestamp": "2026-07-23T22:36:51"
   }
 ]

@@ -136,6 +136,7 @@ BULL = getattr(backtest_engine, "BULL", "Bull")
 SIDEWAYS = getattr(backtest_engine, "SIDEWAYS", "Sideways")
 BEAR = getattr(backtest_engine, "BEAR", "Bear")
 from core.data import returns
+from core import honesty as honesty_engine
 from app.data_engine import (
     render_data_engine_controls, render_single_ticker_input,
     load_ticker_data, get_global_start_date,
@@ -324,6 +325,19 @@ def _compute_backtest_danger_flags(context: dict) -> list[dict]:
                 ),
             })
 
+    honesty = context.get("honesty")
+    if honesty and honesty.get("verdict") == honesty_engine.VERDICT_OVERFIT:
+        dsr_s = "n/a" if honesty.get("dsr") is None else f"{honesty['dsr']:.0%}"
+        pbo_s = "n/a" if honesty.get("pbo") is None else f"{honesty['pbo']:.0%}"
+        flags.append({
+            "severity": "DANGER",
+            "code": "HONESTY_OVERFIT",
+            "message": (
+                f"Honesty Engine verdict is LIKELY OVERFIT (Deflated Sharpe {dsr_s}, "
+                f"overfit probability {pbo_s}). Treat the apparent edge as unproven."
+            ),
+        })
+
     mc_summary = context.get("monte_carlo_summary")
     if mc_summary:
         if mc_summary.get("risk_of_ruin", 0.0) > 0.3:
@@ -414,7 +428,91 @@ def _call_gemini_explainer(context: dict) -> str:
         return _fallback_backtest_explanation(context) + f" (Gemini explanation unavailable: {exc.__class__.__name__})"
 
 
-st.set_page_config(page_title="Backtest | QuantEdge", layout="wide")
+def _build_trials_matrix(df, strategy, bcfg, base_p2, max_trials: int = 14):
+    """
+    Parameter sweep of the *selected* strategy → a (T × N) matrix of net daily
+    returns, one column per configuration. This is the honest input to the
+    Deflated Sharpe (variance across the trials you effectively ran) and the
+    Probability of Backtest Overfitting (does the best in-sample config keep
+    winning out-of-sample?). Returns None if a family cannot be built.
+    """
+    price = df["Close"]
+    cols: dict[str, pd.Series] = {}
+    try:
+        if strategy == "Momentum":
+            for lb in range(8, 8 + max_trials * 2, 2):
+                cols[f"lb{lb}"] = run_backtest(price, momentum_strategy(df, lookback=int(lb)), bcfg).daily_returns
+        elif strategy == "Mean Reversion":
+            for w in range(8, 8 + max_trials * 2, 2):
+                cols[f"w{w}"] = run_backtest(price, mean_reversion_strategy(df, window=int(w), z_thresh=base_p2 / 10), bcfg).daily_returns
+        elif strategy == "RSI":
+            for os_ in range(18, 18 + max_trials):
+                cols[f"os{os_}"] = run_backtest(price, rsi_strategy(df, oversold=int(os_), overbought=int(base_p2)), bcfg).daily_returns
+        elif strategy == "Dual MA":
+            for fast in range(5, 5 + max_trials):
+                cols[f"f{fast}"] = run_backtest(price, dual_ma_strategy(df, fast=int(fast), slow=int(base_p2)), bcfg).daily_returns
+        else:
+            return None  # MACD / Regime-Aware have no single tunable knob to sweep honestly
+    except Exception:
+        return None
+    if len(cols) < 2:
+        return None
+    return pd.DataFrame(cols).dropna(how="any")
+
+
+def _render_honesty_verdict(report) -> None:
+    """Render the plain-language honesty verdict banner + supporting numbers."""
+    palette = {
+        honesty_engine.VERDICT_REAL:        ("#1f8f4e", "rgba(31,143,78,0.12)", "✅"),
+        honesty_engine.VERDICT_OVERFIT:     ("#dc3232", "rgba(220,50,50,0.12)", "⛔"),
+        honesty_engine.VERDICT_INCONCLUSIVE:("#e67e00", "rgba(230,126,0,0.12)", "⚠️"),
+    }
+    color, bg, icon = palette.get(report.verdict, ("#888", "rgba(136,136,136,0.1)", "•"))
+    st.markdown(
+        f"""<div style="
+            background:{bg};border:1px solid {color};border-left:5px solid {color};
+            border-radius:10px;padding:16px 20px;margin:8px 0 14px;">
+          <div style="font-size:13px;font-weight:700;letter-spacing:.08em;color:{color};">
+            {icon} HONESTY VERDICT · {report.verdict}
+          </div>
+          <div style="font-size:20px;font-weight:800;color:#e8f4fd;margin:4px 0 2px;">
+            {report.headline}
+          </div>
+          <div style="font-size:13px;color:var(--text-dim);line-height:1.5;">{report.subtext}</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+    hc = st.columns(4)
+    dsr_txt = "—" if report.dsr != report.dsr else f"{report.dsr:.0%}"
+    pbo_txt = "n/a" if report.pbo != report.pbo else f"{report.pbo:.0%}"
+    hc[0].metric("Deflated Sharpe", dsr_txt,
+                 help="Probability the edge is real after correcting for the number of configurations tried. Higher is better.")
+    hc[1].metric("Overfit Prob (PBO)", pbo_txt,
+                 help="Probability the best in-sample configuration fails out-of-sample. Lower is better.")
+    hc[2].metric("Would it blow up?",
+                 "YES" if report.blew_up else "No",
+                 f"{report.max_drawdown:.0%} max drawdown",
+                 delta_color="inverse")
+    if report.buy_hold_return == report.buy_hold_return:  # not NaN
+        hc[3].metric("Beats Buy & Hold?",
+                     "YES" if report.beats_buy_hold else "No",
+                     f"{report.strategy_return:.1%} vs {report.buy_hold_return:.1%}")
+    else:
+        hc[3].metric("Sharpe (annualised)", f"{report.sharpe_ann:.2f}")
+
+    st.caption(
+        f"Headline Sharpe {report.sharpe_ann:.2f} vs a luck benchmark of "
+        f"{report.sr_benchmark_ann:.2f} after {report.n_trials} effective trial(s) "
+        f"on {report.n_obs} observations."
+    )
+    if report.reasons:
+        with st.expander("Why this verdict?"):
+            for reason in report.reasons:
+                st.markdown(f"- {reason}")
+
+
+st.set_page_config(page_title="Backtest | AlphaForge", layout="wide")
 from app.shared import apply_theme
 apply_theme()
 st.title("⚡ Strategy Backtester")
@@ -573,6 +671,30 @@ if run_clicked:
     fig_rs.add_hline(y=1, line_dash="dot",  line_color="lime")
     fig_rs.update_layout(template="plotly_dark", title="Rolling 63-Day Sharpe", height=280)
     st.plotly_chart(fig_rs, use_container_width=True)
+
+    # ── Section 1.5: Honesty Verdict (Deflated Sharpe / PBO) ─────────────────
+    st.markdown("---")
+    st.subheader("🎯 Honesty Verdict")
+    st.caption(
+        "The moat: an academic overfitting check (Deflated Sharpe Ratio + "
+        "Probability of Backtest Overfitting) that grades whether this edge is "
+        "probably real or probably a searching / luck illusion — before you risk "
+        "a single rupee."
+    )
+    honesty_rep = None
+    with st.spinner("Grading the strategy for honesty (DSR / PBO)..."):
+        try:
+            trials_matrix = _build_trials_matrix(df, strategy, bcfg, p2)
+            honesty_rep = honesty_engine.honesty_report(
+                result.daily_returns,
+                buy_hold_returns=bh_ret,
+                n_trials=6,  # the strategies a user effectively chooses among
+                returns_matrix=trials_matrix,
+            )
+        except Exception as exc:
+            st.info(f"Honesty verdict unavailable for this run ({exc.__class__.__name__}).")
+    if honesty_rep is not None:
+        _render_honesty_verdict(honesty_rep)
 
     # ── Section 2: Regime-Aware Results ──────────────────────────────────────
     if reg_res is not None:
@@ -768,6 +890,15 @@ if run_clicked:
         wf=wf,
         mc=mc,
     )
+    if honesty_rep is not None:
+        backtest_context["honesty"] = {
+            "verdict": honesty_rep.verdict,
+            "dsr": None if honesty_rep.dsr != honesty_rep.dsr else round(honesty_rep.dsr, 4),
+            "pbo": None if honesty_rep.pbo != honesty_rep.pbo else round(honesty_rep.pbo, 4),
+            "sharpe_ann": round(honesty_rep.sharpe_ann, 3),
+            "blew_up": honesty_rep.blew_up,
+            "beats_buy_hold": honesty_rep.beats_buy_hold,
+        }
     backtest_context["danger_flags"] = _compute_backtest_danger_flags(backtest_context)
 
     if backtest_context["danger_flags"]:

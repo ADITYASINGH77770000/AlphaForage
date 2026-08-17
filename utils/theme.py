@@ -1,7 +1,7 @@
 """
 utils/theme.py
 ──────────────────────────────────────────────────────────────────────────────
-QuantEdge Cognitive UI Engine
+AlphaForge Cognitive UI Engine
 Neuroscience-driven design: attention magnetism, reward loops, flow state.
 Call apply_quantedge_theme() at the top of every page.
 """
@@ -730,8 +730,182 @@ _JS = """
 """
 
 
+# ── Animated brand splash ────────────────────────────────────────────────────
+# Plays once per browser tab, on the app's entry page only.
+#
+# It is injected into the TOP document by a tiny one-shot component script —
+# deliberately NOT via st.markdown. Streamlit re-mounts markdown elements on
+# every rerun, which restarts CSS animations; that made the overlay linger on
+# top of slow pages and cover their charts. Living outside Streamlit's managed
+# DOM, the overlay plays once, then deletes itself, and a sessionStorage flag
+# stops it coming back. Being fixed to the real viewport it also covers the
+# header and sidebar, so only the logo shows while it plays — no CSS that
+# touches the rest of the app.
+
+_SPLASH_MS = 4200
+
+_SPLASH_CSS = """
+@keyframes afSplashOut { 0%,82% { opacity:1; } 100% { opacity:0; } }
+@keyframes afBgShift  { 0%,100% { background-position:0% 50%, 100% 50%, 0 0; }
+                        50% { background-position:100% 50%, 0% 50%, 0 0; } }
+@keyframes afSpin     { to { transform:rotate(360deg); } }
+@keyframes afSpinRev  { to { transform:rotate(-360deg); } }
+@keyframes afPulse    { 0% { transform:scale(.45); opacity:.65; }
+                        100% { transform:scale(1.9); opacity:0; } }
+@keyframes afPop      { 0% { transform:scale(.5); opacity:0; }
+                        65% { opacity:1; } 100% { transform:scale(1); opacity:1; } }
+@keyframes afDraw     { from { stroke-dashoffset:340; } to { stroke-dashoffset:0; } }
+@keyframes afGlow     { 0%,100% { filter:drop-shadow(0 0 6px rgba(11,224,255,.5)); }
+                        50% { filter:drop-shadow(0 0 22px rgba(11,224,255,.95)); } }
+@keyframes afRise     { 0% { opacity:0; transform:translateY(16px); }
+                        100% { opacity:1; transform:translateY(0); } }
+@keyframes afFlow     { to { background-position:220% center; } }
+@keyframes afSpark    { 0%,100% { r:3.2; opacity:.7; } 50% { r:5.2; opacity:1; } }
+@keyframes afFloat    { 0% { transform:translateY(20px) scale(.6); opacity:0; }
+                        20% { opacity:.9; } 100% { transform:translateY(-120px) scale(1); opacity:0; } }
+@keyframes afBar      { from { width:0; } to { width:100%; } }
+#af-splash {
+  position:fixed; inset:0; z-index:2147483000; pointer-events:none;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:26px; overflow:hidden; background:#05070f;
+  animation: afSplashOut 4.2s ease-in forwards;
+}
+#af-splash .af-bg {
+  position:absolute; inset:-20%;
+  background:
+    radial-gradient(circle at 30% 32%, rgba(0,245,160,.14), transparent 42%),
+    radial-gradient(circle at 70% 68%, rgba(165,94,253,.16), transparent 46%),
+    #05070f;
+  background-size:200% 200%, 200% 200%, 100% 100%;
+  animation: afBgShift 9s ease-in-out infinite;
+}
+#af-splash .af-stage { position:relative; display:grid; place-items:center;
+                       width:230px; height:230px; }
+#af-splash .af-stage > * { grid-area:1 / 1; }
+#af-splash .af-ring {
+  width:210px; height:210px; border-radius:50%;
+  background:conic-gradient(from 0deg, transparent 0 58%, rgba(0,245,160,.85) 72%,
+            rgba(11,224,255,.95) 82%, transparent 94%);
+  -webkit-mask:radial-gradient(farthest-side, transparent 69%, #000 71%);
+          mask:radial-gradient(farthest-side, transparent 69%, #000 71%);
+  animation: afSpin 3.4s linear infinite; opacity:.9;
+}
+#af-splash .af-ring.r2 {
+  width:170px; height:170px;
+  background:conic-gradient(from 180deg, transparent 0 66%, rgba(165,94,253,.8) 82%, transparent 96%);
+  -webkit-mask:radial-gradient(farthest-side, transparent 66%, #000 68%);
+          mask:radial-gradient(farthest-side, transparent 66%, #000 68%);
+  animation: afSpinRev 4.6s linear infinite; opacity:.75;
+}
+#af-splash .af-pulse {
+  width:150px; height:150px; border-radius:50%;
+  border:2px solid rgba(11,224,255,.55); animation: afPulse 2.6s ease-out infinite;
+}
+#af-splash .af-pulse.d2 { animation-delay:.9s; border-color:rgba(0,245,160,.5); }
+#af-splash .af-pulse.d3 { animation-delay:1.8s; border-color:rgba(165,94,253,.5); }
+#af-splash .af-emblem { animation: afPop .85s cubic-bezier(.2,.9,.3,1.35) both,
+                                   afGlow 1.8s ease-in-out .7s infinite; }
+#af-splash .af-stroke { stroke-dasharray:340; animation: afDraw 1.15s ease-out .15s both; }
+#af-splash .af-spark  { animation: afSpark 1.2s ease-in-out .6s infinite; }
+#af-splash .af-word {
+  position:relative; font-family:'Inter','Segoe UI',sans-serif; font-weight:800;
+  font-size:3rem; letter-spacing:-1px; line-height:1;
+  background:linear-gradient(90deg,#00f5a0,#0be0ff,#a55efd,#0be0ff,#00f5a0);
+  background-size:220% auto; -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation: afRise .7s ease .5s both, afFlow 3.5s linear .5s infinite;
+}
+#af-splash .af-tag {
+  font-family:'JetBrains Mono','Consolas',monospace; font-size:.78rem;
+  letter-spacing:2px; color:#8aa6c8; text-transform:uppercase;
+  animation: afRise .7s ease .95s both;
+}
+#af-splash .af-bar {
+  position:relative; width:230px; height:3px; border-radius:99px;
+  background:rgba(255,255,255,.07); overflow:hidden;
+  animation: afRise .6s ease .8s both;
+}
+#af-splash .af-bar > span {
+  position:absolute; inset:0; width:0; border-radius:99px;
+  background:linear-gradient(90deg,#00f5a0,#0be0ff,#a55efd);
+  box-shadow:0 0 12px rgba(11,224,255,.7); animation: afBar 3.4s ease-out .4s forwards;
+}
+#af-splash .af-particles span {
+  position:absolute; bottom:32%; width:6px; height:6px; border-radius:50%;
+  background:#0be0ff; opacity:0; animation: afFloat 3s ease-in infinite;
+}
+#af-splash .af-particles span:nth-child(1){ left:38%; animation-delay:.2s; background:#00f5a0; }
+#af-splash .af-particles span:nth-child(2){ left:46%; animation-delay:.9s; }
+#af-splash .af-particles span:nth-child(3){ left:54%; animation-delay:.5s; background:#a55efd; }
+#af-splash .af-particles span:nth-child(4){ left:60%; animation-delay:1.3s; }
+#af-splash .af-particles span:nth-child(5){ left:34%; animation-delay:1.6s; background:#a55efd; }
+#af-splash .af-particles span:nth-child(6){ left:64%; animation-delay:.7s; background:#00f5a0; }
+"""
+
+_SPLASH_BODY = """
+  <div class="af-bg"></div>
+  <div class="af-particles"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="af-stage">
+    <div class="af-ring"></div>
+    <div class="af-ring r2"></div>
+    <div class="af-pulse"></div>
+    <div class="af-pulse d2"></div>
+    <div class="af-pulse d3"></div>
+    <svg class="af-emblem" width="128" height="128" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="afSplashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#00f5a0"/>
+          <stop offset="55%" stop-color="#0be0ff"/>
+          <stop offset="100%" stop-color="#a55efd"/>
+        </linearGradient>
+      </defs>
+      <polygon class="af-stroke" points="32,3 55,16.5 55,43.5 32,57 9,43.5 9,16.5"
+               fill="rgba(11,224,255,0.05)" stroke="url(#afSplashGrad)" stroke-width="2.4"
+               stroke-linejoin="round"/>
+      <path class="af-stroke" d="M18 46 L32 18 L46 46" fill="none" stroke="url(#afSplashGrad)"
+            stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <line class="af-stroke" x1="24" y1="37" x2="40" y2="37" stroke="url(#afSplashGrad)"
+            stroke-width="4.4" stroke-linecap="round"/>
+      <circle class="af-spark" cx="32" cy="12" r="3.2" fill="#0be0ff"/>
+    </svg>
+  </div>
+  <div class="af-word">AlphaForge</div>
+  <div class="af-tag">The platform that tells you the truth</div>
+  <div class="af-bar"><span></span></div>
+"""
+
+
+def render_splash() -> None:
+    """
+    Play the AlphaForge brand splash once per browser tab.
+
+    Call this only from the app's entry page. It is a no-op on repeat runs and
+    leaves no styles behind, so it can never affect other pages or their charts.
+    """
+    try:
+        import streamlit.components.v1 as components
+    except Exception:
+        return
+    script = (
+        "<script>(function(){try{"
+        "var W=window.parent,D=W&&W.document;"
+        "if(!D||!W.sessionStorage||W.sessionStorage.getItem('af_splash_done'))return;"
+        "W.sessionStorage.setItem('af_splash_done','1');"
+        "var s=D.createElement('style');s.id='af-splash-style';"
+        "s.textContent=`" + _SPLASH_CSS + "`;D.head.appendChild(s);"
+        "var o=D.createElement('div');o.id='af-splash';"
+        "o.innerHTML=`" + _SPLASH_BODY + "`;D.body.appendChild(o);"
+        "setTimeout(function(){"
+        "if(o&&o.parentNode)o.parentNode.removeChild(o);"
+        "if(s&&s.parentNode)s.parentNode.removeChild(s);"
+        "}," + str(_SPLASH_MS + 200) + ");"
+        "}catch(e){}})();</script>"
+    )
+    components.html(script, height=0)
+
+
 def apply_quantedge_theme() -> None:
-    """Inject the full QuantEdge cognitive UI theme into the current page."""
+    """Inject the full AlphaForge cognitive UI theme into the current page."""
     try:
         st.logo("utils/logo.svg")
     except AttributeError:
@@ -773,7 +947,7 @@ def qe_section_header(title: str, subtitle: str = "") -> None:
     <div class="qe-page-header">
       <div style="color:var(--text-dim);font-family:var(--font-mono);
                   font-size:0.72rem;text-transform:uppercase;letter-spacing:2px;
-                  margin-bottom:6px;">QuantEdge · Research Terminal</div>
+                  margin-bottom:6px;">AlphaForge · Research Terminal</div>
       <div style="font-size:1.7rem;font-weight:700;
                   background:linear-gradient(135deg,#e8f4fd 0%,#0be0ff 60%,#a55efd 100%);
                   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
@@ -856,7 +1030,7 @@ def qe_regime_box(regime: str, recommendation: str = "") -> None:
 
 
 def apply_plotly_theme(fig, title: str = "", height: int = 500):
-    """Apply the QuantEdge dark Plotly theme to any figure."""
+    """Apply the AlphaForge dark Plotly theme to any figure."""
     fig.update_layout(
         **PLOTLY_LAYOUT,
         height=height,

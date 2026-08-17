@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- Animated header banner -->
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0E1117,50:00C2FF,100:0E1117&height=200&section=header&text=QuantEdge&fontSize=80&fontColor=00C2FF&fontAlignY=38&desc=Institutional-Grade%20Quantitative%20Trading%20Platform&descAlignY=60&descSize=18&descColor=FFFFFF&animation=fadeIn" width="100%"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0E1117,50:00C2FF,100:0E1117&height=200&section=header&text=AlphaForge&fontSize=80&fontColor=00C2FF&fontAlignY=38&desc=Institutional-Grade%20Quantitative%20Trading%20Platform&descAlignY=60&descSize=18&descColor=FFFFFF&animation=fadeIn" width="100%"/>
 
 <br/>
 
@@ -13,7 +13,7 @@
 
 <br/>
 
-> **QuantEdge** is a full-stack, research-grade quantitative trading platform combining real-time market analytics, multi-model ML price prediction, factor investing, regime detection, and portfolio optimization — all in a blazing-fast dark-mode Streamlit dashboard backed by a FastAPI REST layer.
+> **AlphaForge** is a full-stack, research-grade quantitative trading platform combining real-time market analytics, multi-model ML price prediction, factor investing, regime detection, and portfolio optimization — all in a blazing-fast dark-mode Streamlit dashboard backed by a FastAPI REST layer.
 
 <br/>
 
@@ -143,7 +143,7 @@ Real-time watchlist with portfolio-level metrics computed on every load:
 ## 🗂️ Project Structure
 
 ```
-QuantEdge-main/
+AlphaForge-main/
 │
 ├── 📁 api/                          # FastAPI REST layer
 │   └── server.py                    # All endpoints (wraps core/ — no logic duplication)
@@ -196,7 +196,7 @@ QuantEdge-main/
 │   ├── notifications.py             # Gmail SMTP alert dispatcher
 │   ├── report.py                    # ReportLab PDF report generator
 │   ├── theme.py                     # Neuroscience-driven dark UI engine
-│   └── logo.svg                     # QuantEdge brand mark
+│   └── logo.svg                     # AlphaForge brand mark
 │
 ├── 📁 tests/                        # pytest test suite
 │   ├── test_alpha_engine.py
@@ -232,14 +232,14 @@ QuantEdge-main/
 
 **Windows**
 ```bat
-cd QuantEdge-main
+cd AlphaForge-main
 setup.bat
 start_streamlit.bat
 ```
 
 **Linux / macOS**
 ```bash
-cd QuantEdge-main
+cd AlphaForge-main
 bash setup.sh
 source venv/bin/activate
 python -m streamlit run app/main.py
@@ -282,7 +282,210 @@ uvicorn api.server:app --host 0.0.0.0 --port 8000
 start_api.bat
 ```
 
+## Deployment
+
+### Render
+
+This repo is configured for Streamlit deployment on Render through
+`render.yaml`.
+
+- The Render service installs `requirements-core.txt` to avoid the heavy
+  TensorFlow and PyTorch stack during web deployment.
+- `DEMO_MODE=true` is the default deployment setting so the app can boot
+  without external market or email credentials.
+- If you want live integrations, add your real environment variables in the
+  Render dashboard instead of committing them to `.env.example`.
+
+Deploy steps:
+
+1. Push the repo to GitHub.
+2. In Render, create a new Blueprint service from the repository.
+3. Confirm the service uses the generated `quantedge-streamlit` web app.
+4. Add any optional secrets in Render environment variables.
+5. Deploy and open the generated URL.
+
+### Vercel
+
+Vercel is suitable for the FastAPI backend in this repo, not for the
+long-running Streamlit dashboard.
+
+- Vercel now supports FastAPI on its Python runtime and can deploy a root
+  `index.py` app entrypoint.
+- This repo includes [index.py](/d:/AlphaForge-refactored/AlphaForge-main/index.py)
+  as a thin Vercel entrypoint that re-exports the existing
+  [api/server.py](/d:/AlphaForge-refactored/AlphaForge-main/api/server.py) app.
+- The Vercel config lives in
+  [vercel.json](/d:/AlphaForge-refactored/AlphaForge-main/vercel.json).
+
+Expected result on Vercel:
+
+- Your API routes will be live.
+- The Streamlit UI in `app/main.py` will not be the deployed Vercel frontend.
+
+Deploy steps:
+
+1. Push the repo to GitHub.
+2. Import the repository into Vercel.
+3. Let Vercel detect the Python project and deploy it.
+4. Add any optional environment variables in the Vercel dashboard.
+5. Open the generated deployment URL and test routes such as `/docs`.
+
+### Streamlit Community Cloud
+
+This repo is a better fit for Streamlit Community Cloud than Vercel because
+the main product here is the Streamlit app itself.
+
+- Community Cloud deploys from a GitHub repository and lets you choose the
+  entrypoint file.
+- Community Cloud supports choosing a Python version in Advanced settings.
+- Secrets should be pasted into the deployment dialog instead of committed to
+  the repo.
+
+Recommended app entrypoint:
+
+- `app/main.py`
+
+Dependency file used by Community Cloud for that entrypoint:
+
+- `app/requirements.txt`
+
+Recommended deployment settings:
+
+- Python version: `3.11`
+- Secrets: only if you want live integrations; demo mode can run without them
+
+Suggested secrets for this project:
+
+```toml
+DEMO_MODE = "true"
+LOG_LEVEL = "INFO"
+CACHE_TTL_SECONDS = "3600"
+GMAIL_SENDER = "your_email@gmail.com"
+GMAIL_PASSWORD = "your_app_password"
+GMAIL_RECEIVER = "alerts@example.com"
+NEWS_API_KEY = "your_news_api_key"
+GEMINI_API_KEY = "your_gemini_api_key"
+ALPACA_API_KEY = "your_alpaca_key"
+ALPACA_SECRET_KEY = "your_alpaca_secret"
+ALPACA_BASE_URL = "https://paper-api.alpaca.markets"
+```
+
+Deploy steps:
+
+1. Push the repo to GitHub.
+2. Go to `share.streamlit.io` and click `Create app`.
+3. Choose your repository, branch, and the file path `app/main.py`.
+4. In `Advanced settings`, select Python `3.11`.
+5. Paste secrets only if needed, then deploy.
+
+Community Cloud docs:
+
+- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy
+- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management
+
+## Demo Mode
 Interactive docs available at **http://localhost:8000/docs** (Swagger UI).
+
+## Deployment
+
+### Render
+
+This repo is configured for Streamlit deployment on Render through
+`render.yaml`.
+
+- The Render service installs `requirements-core.txt` to avoid the heavy
+  TensorFlow and PyTorch stack during web deployment.
+- `DEMO_MODE=true` is the default deployment setting so the app can boot
+  without external market or email credentials.
+- If you want live integrations, add your real environment variables in the
+  Render dashboard instead of committing them to `.env.example`.
+
+Deploy steps:
+
+1. Push the repo to GitHub.
+2. In Render, create a new Blueprint service from the repository.
+3. Confirm the service uses the generated `quantedge-streamlit` web app.
+4. Add any optional secrets in Render environment variables.
+5. Deploy and open the generated URL.
+
+### Vercel
+
+Vercel is suitable for the FastAPI backend in this repo, not for the
+long-running Streamlit dashboard.
+
+- Vercel now supports FastAPI on its Python runtime and can deploy a root
+  `index.py` app entrypoint.
+- This repo includes `index.py` as a thin Vercel entrypoint that re-exports
+  the existing `api/server.py` app.
+- The Vercel config lives in `vercel.json`.
+
+Expected result on Vercel:
+
+- Your API routes will be live.
+- The Streamlit UI in `app/main.py` will not be the deployed Vercel frontend.
+
+Deploy steps:
+
+1. Push the repo to GitHub.
+2. Import the repository into Vercel.
+3. Let Vercel detect the Python project and deploy it.
+4. Add any optional environment variables in the Vercel dashboard.
+5. Open the generated deployment URL and test routes such as `/docs`.
+
+### Streamlit Community Cloud
+
+This repo is a better fit for Streamlit Community Cloud than Vercel because
+the main product here is the Streamlit app itself.
+
+- Community Cloud deploys from a GitHub repository and lets you choose the
+  entrypoint file.
+- Community Cloud supports choosing a Python version in Advanced settings.
+- Secrets should be pasted into the deployment dialog instead of committed to
+  the repo.
+
+Recommended app entrypoint:
+
+- `app/main.py`
+
+Dependency file used by Community Cloud for that entrypoint:
+
+- `app/requirements.txt`
+
+Recommended deployment settings:
+
+- Python version: `3.11`
+- Secrets: only if you want live integrations; demo mode can run without them
+
+Suggested secrets for this project:
+
+```toml
+DEMO_MODE = "true"
+LOG_LEVEL = "INFO"
+CACHE_TTL_SECONDS = "3600"
+GMAIL_SENDER = "your_email@gmail.com"
+GMAIL_PASSWORD = "your_app_password"
+GMAIL_RECEIVER = "alerts@example.com"
+NEWS_API_KEY = "your_news_api_key"
+GEMINI_API_KEY = "your_gemini_api_key"
+ALPACA_API_KEY = "your_alpaca_key"
+ALPACA_SECRET_KEY = "your_alpaca_secret"
+ALPACA_BASE_URL = "https://paper-api.alpaca.markets"
+```
+
+Deploy steps:
+
+1. Push the repo to GitHub.
+2. Go to `share.streamlit.io` and click `Create app`.
+3. Choose your repository, branch, and the file path `app/main.py`.
+4. In `Advanced settings`, select Python `3.11`.
+5. Paste secrets only if needed, then deploy.
+
+Community Cloud docs:
+
+- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy
+- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management
+
+## Demo Mode
 
 The API is a thin wrapper around `core/` — zero logic duplication. Every endpoint delegates directly to the same Python functions powering the Streamlit pages.
 
@@ -481,7 +684,7 @@ Distributed under the **MIT License**. See `LICENSE` for details.
 
 ## ⭐ Star History
 
-If QuantEdge saved you time or inspired your quant research, give it a ⭐ on GitHub — it helps other traders discover it.
+If AlphaForge saved you time or inspired your quant research, give it a ⭐ on GitHub — it helps other traders discover it.
 
 ---
 
@@ -489,7 +692,7 @@ If QuantEdge saved you time or inspired your quant research, give it a ⭐ on Gi
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0E1117,50:00C2FF,100:0E1117&height=120&section=footer&animation=fadeIn" width="100%"/>
 
-**Built with 🔵 by the QuantEdge team — for quants, by quants.**
+**Built with 🔵 by the AlphaForge team — for quants, by quants.**
 
 *No paid data. No black boxes. All research cited.*
 

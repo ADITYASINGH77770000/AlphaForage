@@ -1,5 +1,5 @@
 """
-app/pages/07_factors.py — QuantEdge Factor Research Lab
+app/pages/07_factors.py — AlphaForge Factor Research Lab
 ════════════════════════════════════════════════════════
 All original factor-research logic preserved exactly.
 
@@ -691,7 +691,7 @@ def _call_gemini_factor_explainer(context: dict) -> str:
 # PAGE SETUP
 # ══════════════════════════════════════════════════════════════════════════════
 
-st.set_page_config(page_title="Factors | QuantEdge", layout="wide")
+st.set_page_config(page_title="Factors | AlphaForge", layout="wide")
 from app.shared import apply_theme
 apply_theme()
 st.title("🧪 Factor Research Lab")

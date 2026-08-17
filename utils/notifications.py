@@ -1,72 +1,3 @@
-# """
-# utils/notifications.py
-# ──────────────────────────────────────────────────────────────────────────────
-# Email notification system with credentials sourced from .env (never hardcoded).
-# """
-
-# import smtplib
-# from email.mime.multipart import MIMEMultipart
-# from email.mime.text import MIMEText
-# from loguru import logger
-# from utils.config import cfg
-
-
-# def send_email(subject: str, body: str) -> bool:
-#     """
-#     Send a plain-text email alert via Gmail SMTP.
-
-#     Parameters
-#     ----------
-#     subject : str  — email subject line
-#     body    : str  — email body text
-
-#     Returns
-#     -------
-#     bool — True on success, False on failure
-#     """
-#     receiver = cfg.GMAIL_RECEIVER or cfg.GMAIL_SENDER
-
-#     if not cfg.GMAIL_PASSWORD or not cfg.GMAIL_SENDER:
-#         logger.warning("Email credentials not configured — skipping notification")
-#         return False
-#     if not receiver:
-#         logger.warning("Email receiver not configured — skipping notification")
-#         return False
-
-#     msg = MIMEMultipart()
-#     msg["From"]    = cfg.GMAIL_SENDER
-#     msg["To"]      = receiver
-#     msg["Subject"] = subject
-#     msg.attach(MIMEText(body, "plain"))
-
-#     try:
-#         with smtplib.SMTP(cfg.SMTP_SERVER, cfg.SMTP_PORT) as server:
-#             server.starttls()
-#             server.login(cfg.GMAIL_SENDER, cfg.GMAIL_PASSWORD)
-#             server.sendmail(cfg.GMAIL_SENDER, receiver, msg.as_string())
-#         logger.info(f"Alert email sent: {subject}")
-#         return True
-#     except Exception as exc:
-#         logger.error(f"Failed to send email: {exc}")
-#         return False
-
-
-# def build_alert_body(ticker: str, metric: str, price: float,
-#                      threshold: float, insight: str) -> str:
-#     """Compose a formatted alert email body."""
-#     return (
-#         f"QuantEdge Price Alert\n"
-#         f"{'─' * 40}\n"
-#         f"Ticker  : {ticker}\n"
-#         f"Metric  : {metric}\n"
-#         f"Current : ${price:,.2f}\n"
-#         f"Threshold: ${threshold:,.2f}\n\n"
-#         f"Educational Insight\n"
-#         f"{'─' * 40}\n"
-#         f"{insight}\n"
-#     )
-
-
 """
 utils/notifications.py
 ──────────────────────────────────────────────────────────────────────────────
@@ -183,7 +114,7 @@ def build_alert_body(ticker: str, metric: str, price: float,
                      threshold: float, insight: str) -> str:
     """Compose a formatted plain-text alert email body."""
     return (
-        f"QuantEdge Alert\n"
+        f"AlphaForge Alert\n"
         f"{'─' * 40}\n"
         f"Ticker   : {ticker}\n"
         f"Metric   : {metric}\n"
@@ -211,7 +142,7 @@ def build_alert_body_html(ticker: str, metric: str, price: float,
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;
                 background:#0d1117;color:#e8f4fd;border-radius:10px;overflow:hidden;">
       <div style="background:{border_color};padding:16px 24px;">
-        <h2 style="margin:0;color:#fff;">⚡ QuantEdge {level} Alert</h2>
+        <h2 style="margin:0;color:#fff;">⚡ AlphaForge {level} Alert</h2>
       </div>
       <div style="padding:24px;border-left:4px solid {border_color};
                   background:{bg_color};margin:16px;border-radius:6px;">
@@ -232,7 +163,7 @@ def build_alert_body_html(ticker: str, metric: str, price: float,
                   font-size:14px;line-height:1.6;">{insight}</p>
       </div>
       <div style="padding:12px 24px;background:#161b22;font-size:11px;color:#555;text-align:center;">
-        QuantEdge Automated Alert System — do not reply to this email
+        AlphaForge Automated Alert System — do not reply to this email
       </div>
     </div>
     """

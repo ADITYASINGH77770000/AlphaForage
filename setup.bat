@@ -1,9 +1,9 @@
 @echo off
-REM ── QuantEdge Setup Script (Windows) ─────────────────────────────────────────
+REM ── AlphaForge Setup Script (Windows) ─────────────────────────────────────────
 REM Run once: setup.bat
 
 echo ========================================
-echo   QuantEdge -- Setup Script (Windows)
+echo   AlphaForge -- Setup Script (Windows)
 echo ========================================
 
 set "PYTHON_CMD=python"

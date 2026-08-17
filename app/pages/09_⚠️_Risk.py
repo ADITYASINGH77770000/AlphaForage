@@ -628,7 +628,7 @@ def _call_gemini_risk_explainer(context: dict) -> str:
 # PAGE SETUP
 # ══════════════════════════════════════════════════════════════════════════════
 
-st.set_page_config(page_title="Risk | QuantEdge", layout="wide")
+st.set_page_config(page_title="Risk | AlphaForge", layout="wide")
 from app.shared import apply_theme
 apply_theme()
 st.title("⚠️ Risk Analytics")

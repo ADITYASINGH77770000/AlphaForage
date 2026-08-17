@@ -1,6 +1,6 @@
 
 """
-app/main.py  —  QuantEdge Command Center
+app/main.py  —  AlphaForge Command Center
 """
 
 import sys
@@ -17,6 +17,7 @@ import streamlit as st
 from utils.config import cfg
 from utils.theme import (
     apply_quantedge_theme,
+    render_splash,
     apply_plotly_theme,
     qe_neon_divider,
     qe_section_header,
@@ -30,12 +31,15 @@ from core.indicators import rsi, add_all_indicators
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="QuantEdge | Command Center",
+    page_title="AlphaForge | Command Center",
     page_icon="📡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 apply_quantedge_theme()
+
+# ── Brand splash: entry page only, plays once per browser tab, self-removing ───
+render_splash()
 
 # ── Hide Streamlit's auto-generated nav (handled natively in .streamlit/config.toml) ──
 
@@ -175,7 +179,7 @@ st.markdown(f"""
           background:linear-gradient(135deg,#e8f4fd 0%,#0be0ff 55%,#a55efd 100%);
           -webkit-background-clip:text;-webkit-text-fill-color:transparent;
           background-clip:text;line-height:1.1;margin-bottom:10px;">
-        QuantEdge
+        AlphaForge
       </div>
       <div style="
           font-size:0.82rem;color:#7a9abb;
@@ -534,7 +538,7 @@ st.markdown(f"""
 <div style="display:flex;justify-content:space-between;align-items:center;
             padding:14px 0 4px 0;">
   <div style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:#546e8a;">
-    QuantEdge  ·  {'Demo' if cfg.DEMO_MODE else 'Live'} Mode
+    AlphaForge  ·  {'Demo' if cfg.DEMO_MODE else 'Live'} Mode
     ·  Data via yfinance  ·  RFR {cfg.RISK_FREE_RATE:.1%}
   </div>
   <div style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:#546e8a;">

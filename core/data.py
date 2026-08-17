@@ -1,5 +1,5 @@
 """
-Central data module for QuantEdge.
+Central data module for AlphaForge.
 
 The app consumes one standard OHLCV structure from here in either:
 - static mode: cached historical daily data
@@ -64,7 +64,7 @@ def _business_or_intraday_freq(interval: str) -> str:
 
 
 def _normalise_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
-    """Flatten yfinance output and enforce the QuantEdge OHLCV schema."""
+    """Flatten yfinance output and enforce the AlphaForge OHLCV schema."""
     if df is None or df.empty:
         empty = pd.DataFrame(columns=OHLCV_COLUMNS)
         empty.index = pd.DatetimeIndex([], name="Date")
