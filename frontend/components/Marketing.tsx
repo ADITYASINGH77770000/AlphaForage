@@ -230,18 +230,57 @@ export function Insights() {
 
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
-const FOOTER_COLS = [
-  { h: "Platform", links: ["Honesty Engine", "Backtester", "Prediction Studio", "Dashboard"] },
-  { h: "Analytics", links: ["Risk Analytics", "Portfolio Optimization", "Factor Analytics", "Regime Detection", "Prediction"] },
-  { h: "Resources", links: ["Documentation", "Insights", "Glossary", "REST API", "Changelog"] },
-  { h: "Company", links: ["About", "Contact", "Privacy", "Terms"] },
+
+/* Where to find the person who built this. Icon-only, so every link carries an
+   aria-label and a title — the mark alone is not an accessible name. */
+const SOCIALS: { label: string; href: string; icon: JSX.Element }[] = [
+  {
+    label: "Portfolio",
+    href: "https://adityaa-singh-portfolio-13ny.vercel.app/",
+    icon: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18" />
+        <path d="M12 3c2.4 2.6 3.7 5.7 3.7 9s-1.3 6.4-3.7 9c-2.4-2.6-3.7-5.7-3.7-9S9.6 5.6 12 3z" />
+      </>
+    ),
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/aditya-singh-7210b2267/",
+    icon: (
+      <>
+        <rect x="3" y="8.5" width="3.4" height="12" rx="0.4" />
+        <circle cx="4.7" cy="4.4" r="1.9" />
+        <path d="M10.2 20.5v-12h3.2v1.7a3.9 3.9 0 0 1 3.5-1.9c2.9 0 4.1 1.9 4.1 4.9v7.3h-3.4v-6.6c0-1.6-.6-2.4-1.9-2.4-1.4 0-2.1 1-2.1 2.5v6.5z" />
+      </>
+    ),
+  },
+  {
+    label: "GitHub",
+    href: "https://github.com/ADITYASINGH77770000",
+    icon: (
+      <path d="M12 2.2a9.8 9.8 0 0 0-3.1 19.1c.5.1.7-.2.7-.5v-1.7c-2.7.6-3.3-1.2-3.3-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.4-1.1.7-1.3-2.2-.3-4.5-1.1-4.5-4.9 0-1.1.4-1.9 1-2.6-.1-.2-.4-1.3.1-2.6 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.3.2 2.4.1 2.6.6.7 1 1.5 1 2.6 0 3.8-2.3 4.6-4.5 4.8.4.3.7.9.7 1.9v2.7c0 .3.2.6.7.5A9.8 9.8 0 0 0 12 2.2z" />
+    ),
+  },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/thakuraditya00007/",
+    icon: (
+      <>
+        <rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.1" cy="6.9" r="1.1" />
+      </>
+    ),
+  },
 ];
 
 export function FooterFull() {
   return (
     <footer className="relative z-10 border-t border-white/10 bg-panel/30">
       <div className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+        <div className="flex flex-col gap-9 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex items-center gap-2.5">
               <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden>
@@ -261,32 +300,41 @@ export function FooterFull() {
             <p className="mt-4 max-w-xs text-[13.5px] leading-6 text-haze">
               The quant platform that tells you the truth. Test strategies honestly — before you risk a rupee.
             </p>
-            <div className="mt-5 flex gap-2.5">
-              {["𝕏", "in", "gh"].map((s) => (
-                <span
-                  key={s}
-                  className="hv-btn flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/12 font-mono text-[11px] text-hazedim hover:border-forge-cyan hover:text-forge-cyan"
+          </div>
+
+          {/* Built by — the only links the footer carries now. */}
+          <div className="lg:text-right">
+            <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-white">
+              Built by Aditya Singh
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2.5 lg:justify-end">
+              {SOCIALS.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.label}
+                  title={s.label}
+                  className="hv-btn flex h-9 w-9 items-center justify-center rounded-full border border-white/12 text-hazedim hover:border-forge-cyan hover:text-forge-cyan"
                 >
-                  {s}
-                </span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    {s.icon}
+                  </svg>
+                </a>
               ))}
             </div>
           </div>
-
-          {FOOTER_COLS.map((c) => (
-            <div key={c.h}>
-              <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-white">{c.h}</div>
-              <ul className="mt-4 space-y-2.5">
-                {c.links.map((l) => (
-                  <li key={l}>
-                    <span className="hv-link cursor-pointer text-[13px] text-haze hover:text-forge-cyan">
-                      {l}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
         </div>
 
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-7 sm:flex-row">

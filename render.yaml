@@ -1,6 +1,44 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AlphaForge — Render blueprint
+#
+# Two Python services. The Next.js portal is deployed separately on Vercel and
+# points at the API service below through its API_URL environment variable.
+#
+#   alphaforge-api        FastAPI engine  → https://alphaforge-api.onrender.com
+#   alphaforge-streamlit  Streamlit app   → https://alphaforge-streamlit.onrender.com
+#
+# Both install requirements-core.txt only: the heavy TensorFlow/PyTorch stack in
+# requirements-ml.txt will not fit a free instance and is not needed to boot.
+#
+# NOTE ON FREE INSTANCES
+#   • they sleep after ~15 minutes idle; the next request pays a cold start
+#   • the filesystem is ephemeral — data/auth/*.json does NOT survive a restart,
+#     so accounts created on the deployed portal will disappear. Attach a paid
+#     persistent disk, or move the store to a database, if accounts must last.
+# ─────────────────────────────────────────────────────────────────────────────
+
 services:
+  # ── The engine. Everything else reads from this. ───────────────────────────
   - type: web
-    name: quantedge-streamlit
+    name: alphaforge-api
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements-core.txt"
+    startCommand: "python -m uvicorn api.server:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/config
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DEMO_MODE
+        value: "true"
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: CACHE_TTL_SECONDS
+        value: "3600"
+
+  # ── The original Streamlit dashboard, unchanged. ───────────────────────────
+  - type: web
+    name: alphaforge-streamlit
     env: python
     plan: free
     buildCommand: "pip install -r requirements-core.txt"

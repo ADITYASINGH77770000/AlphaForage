@@ -410,104 +410,79 @@ Interactive docs at **http://localhost:8000/docs** (Swagger UI). The API is a th
 
 ## 🚢 Deployment
 
-> ℹ️ The configs below deploy the **Python surfaces** (Streamlit on Render, FastAPI on Vercel). The Next.js portal is a separate deployment: build `frontend/` on any Node host and point its `API_URL` env var at your deployed FastAPI service.
+AlphaForge deploys as **three independent services**. The portal talks to the API; the API and Streamlit share the same Python core.
 
-### Render
+```
+Vercel                          Render
+┌──────────────────────┐        ┌────────────────────────┐
+│  Next.js portal      │  /api/*│  alphaforge-api        │
+│  (frontend/)         │───────▶│  FastAPI + core/       │
+│  API_URL env var     │        └────────────────────────┘
+└──────────────────────┘        ┌────────────────────────┐
+                                │  alphaforge-streamlit  │
+                                │  app/main.py           │
+                                └────────────────────────┘
+```
 
-This repo is configured for Streamlit deployment on Render through
-`render.yaml`.
+> ⚠️ **Order matters** — deploy the API first. The portal needs its URL at build time.
 
-- The Render service installs `requirements-core.txt` to avoid the heavy
-  TensorFlow and PyTorch stack during web deployment.
-- `DEMO_MODE=true` is the default deployment setting so the app can boot
-  without external market or email credentials.
-- If you want live integrations, add your real environment variables in the
-  Render dashboard instead of committing them to `.env.example`.
+### 1 · API + Streamlit on Render
 
-Deploy steps:
-
-1. Push the repo to GitHub.
-2. In Render, create a new Blueprint service from the repository.
-3. Confirm the service uses the web app generated from `render.yaml`.
-4. Add any optional secrets in Render environment variables.
-5. Deploy and open the generated URL.
-
-### Vercel
-
-Vercel is suitable for the FastAPI backend in this repo, not for the
-long-running Streamlit dashboard.
-
-- Vercel now supports FastAPI on its Python runtime and can deploy a root
-  `index.py` app entrypoint.
-- This repo includes [index.py](index.py) as a thin Vercel entrypoint that
-  re-exports the existing [api/server.py](api/server.py) app.
-- The Vercel config lives in [vercel.json](vercel.json).
-
-Expected result on Vercel:
-
-- Your API routes will be live.
-- The Streamlit UI in `app/main.py` will not be the deployed Vercel frontend.
-
-Deploy steps:
+Both services are defined in [render.yaml](render.yaml), so one blueprint deploys them together.
 
 1. Push the repo to GitHub.
-2. Import the repository into Vercel.
-3. Let Vercel detect the Python project and deploy it.
-4. Add any optional environment variables in the Vercel dashboard.
-5. Open the generated deployment URL and test routes such as `/docs`.
+2. In Render → **New** → **Blueprint**, select the repository.
+3. Render reads `render.yaml` and proposes **alphaforge-api** and **alphaforge-streamlit**. Approve both.
+4. Wait for the first build (installs `requirements-core.txt` only — the ML stack is far too heavy for a free instance).
+5. Confirm the API is alive at `https://<your-api>.onrender.com/api/config`, and Swagger at `/docs`.
 
-### Streamlit Community Cloud
+Chosen deliberately over Vercel for the Python side: several endpoints legitimately run 15–50 seconds (`/api/factors/regime` is the worst at ~50s), and Vercel's Hobby tier kills a function at 10 seconds. Render's web services have no such cap.
 
-This repo is a better fit for Streamlit Community Cloud than Vercel because
-the main product here is the Streamlit app itself.
+### 2 · Portal on Vercel
 
-- Community Cloud deploys from a GitHub repository and lets you choose the
-  entrypoint file.
-- Community Cloud supports choosing a Python version in Advanced settings.
-- Secrets should be pasted into the deployment dialog instead of committed to
-  the repo.
+1. In Vercel → **Add New** → **Project**, import the same repository.
+2. Set **Root Directory** to `frontend` — this is the step everything else depends on.
+3. Framework preset auto-detects as **Next.js**. Leave the build settings alone.
+4. Add an environment variable:
 
-Recommended app entrypoint:
+   | Key | Value |
+   |-----|-------|
+   | `API_URL` | `https://<your-api>.onrender.com` *(no trailing slash)* |
 
-- `app/main.py`
+5. Deploy. The portal proxies `/api/*` to Render server-side, so the browser stays same-origin and the backend host never reaches the client bundle.
 
-Dependency file used by Community Cloud for that entrypoint:
+See [frontend/.env.example](frontend/.env.example) for the same variable documented locally.
 
-- `app/requirements.txt`
+### Free-tier realities
 
-Recommended deployment settings:
+| | Consequence |
+|---|---|
+| **Instances sleep** after ~15 min idle | First request after a nap pays a cold start of 30s+ |
+| **Ephemeral filesystem** | `data/auth/*.json` does not survive a restart — **accounts created on the deployed portal will disappear**. Attach a paid persistent disk or move the store to a database if they must last. |
+| **No auth on data routes** | 59 of 60 API routes are reachable without a session. Anyone with the API URL can read every analytic directly. |
+| **Cookie without `secure`** | The session cookie is not HTTPS-only; see `_set_session_cookie` in `api/server.py`. |
 
-- Python version: `3.11`
-- Secrets: only if you want live integrations; demo mode can run without them
+> The last two are properties of the current code, not of Render. `api/auth.py` documents its own limits in its header — read it before treating the deployed portal as private.
 
-Suggested secrets for this project:
+### Streamlit Community Cloud (alternative)
+
+If you only want the Streamlit dashboard live, Community Cloud is the shortest path:
+
+- Entrypoint: `app/main.py`
+- Dependency file: `app/requirements.txt` (already present — Community Cloud checks the entrypoint directory before the repo root)
+- Python version: `3.11` under **Advanced settings**
+- Secrets: none required; demo mode boots without any
 
 ```toml
 DEMO_MODE = "true"
 LOG_LEVEL = "INFO"
 CACHE_TTL_SECONDS = "3600"
-GMAIL_SENDER = "your_email@gmail.com"
-GMAIL_PASSWORD = "your_app_password"
-GMAIL_RECEIVER = "alerts@example.com"
-NEWS_API_KEY = "your_news_api_key"
-GEMINI_API_KEY = "your_gemini_api_key"
-ALPACA_API_KEY = "your_alpaca_key"
-ALPACA_SECRET_KEY = "your_alpaca_secret"
-ALPACA_BASE_URL = "https://paper-api.alpaca.markets"
 ```
 
-Deploy steps:
+Docs: [deploy](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy) · [secrets](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management)
 
-1. Push the repo to GitHub.
-2. Go to `share.streamlit.io` and click `Create app`.
-3. Choose your repository, branch, and the file path `app/main.py`.
-4. In `Advanced settings`, select Python `3.11`.
-5. Paste secrets only if needed, then deploy.
+---
 
-Community Cloud docs:
-
-- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy
-- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management
 
 ## 🟢 Demo Mode
 
