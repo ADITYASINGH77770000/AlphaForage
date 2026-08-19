@@ -111,37 +111,67 @@ export function PortfolioModule() {
   const [front, setFront] = useState<AnalyticFrontierResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [fLoading, setFLoading] = useState(false);
+  const [waited, setWaited] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [runId, setRunId] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const ignore = (e: unknown) => (e as Error)?.name === "AbortError";
   const msg = (e: unknown) => (e instanceof ApiError ? e.message : String(e));
+
+  const stopPoll = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  };
+  useEffect(() => stopPoll, []);
 
   const run = useCallback(async () => {
     const list = tickers.split(",").map((t) => t.trim()).filter(Boolean);
     if (list.length < 2) { setError("Enter at least two tickers, comma-separated."); setLoading(false); return; }
 
     abortRef.current?.abort();
+    stopPoll();
     const ac = new AbortController();
     abortRef.current = ac;
-    setLoading(true); setError(null); setFront(null);
+    setLoading(true); setError(null); setFront(null); setWaited(0);
 
     const body = { tickers: list, start, max_weight: maxWeight, cost_bps: costBps, rebal_days: rebalDays };
 
+    /* The optimiser runs server-side as a job. It is ~5s on a fast machine and
+       can be over a minute on a small cloud instance, so no single request is
+       ever left holding the connection open. */
+    const loadFrontier = () => {
+      setFLoading(true);
+      api.portfolioFrontierAnalytic(body, ac.signal)
+        .then(setFront).catch(() => { if (!ac.signal.aborted) setFront(null); })
+        .finally(() => setFLoading(false));
+    };
+
     try {
-      setRes(await api.portfolioFull(body, ac.signal));
-      setLoading(false);
+      const { job_id } = await api.portfolioFullStart(body, ac.signal);
+      const tick = async () => {
+        if (ac.signal.aborted) { stopPoll(); return; }
+        try {
+          const job = await api.portfolioJob(job_id, ac.signal);
+          setWaited(job.elapsed_seconds ?? 0);
+          if (job.status === "done" && job.result) {
+            stopPoll(); setLoading(false); setRes(job.result);
+            loadFrontier();                       // only once the page has data
+          } else if (job.status === "error") {
+            stopPoll(); setLoading(false);
+            setError(job.error ?? "The portfolio build failed.");
+          }
+        } catch (e) {
+          if (ignore(e)) return;
+          stopPoll(); setLoading(false); setError(msg(e));
+        }
+      };
+      tick();
+      pollRef.current = setInterval(tick, 2000);
     } catch (e) {
       if (ignore(e)) return;
-      setError(msg(e)); setLoading(false); return;
+      setError(msg(e)); setLoading(false);
     }
-
-    // The frontier is ~50 convex solves — load it after the page is populated.
-    setFLoading(true);
-    api.portfolioFrontierAnalytic(body, ac.signal)
-      .then(setFront).catch(() => { if (!ac.signal.aborted) setFront(null); })
-      .finally(() => setFLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickers, start, maxWeight, costBps, rebalDays]);
 
@@ -149,7 +179,7 @@ export function PortfolioModule() {
   useEffect(() => {
     if (runId === 0) return;
     run();
-    return () => abortRef.current?.abort();
+    return () => { abortRef.current?.abort(); stopPoll(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId]);
 
@@ -211,6 +241,15 @@ export function PortfolioModule() {
             style={{ borderColor: `${ACCENT}80`, background: `${ACCENT}1a`, color: ACCENT }}>
             {loading ? "Optimising…" : "Run portfolio analysis"}
           </button>
+
+          {/* A cold free-tier instance can take over a minute. Showing the clock
+              is the difference between "working" and "this page is broken". */}
+          {loading && (
+            <p className="mt-3 font-mono text-[11px] text-hazedim">
+              Optimising server-side{waited > 0 ? ` · ${waited.toFixed(0)}s elapsed` : "…"}
+              {waited > 20 && " · a cold cloud instance can take up to a minute"}
+            </p>
+          )}
         </div>
 
         {error && <div className="mt-6"><ApiDown message={error} /></div>}

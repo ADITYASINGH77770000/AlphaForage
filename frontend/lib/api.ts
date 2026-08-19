@@ -452,6 +452,22 @@ export type StudioStartResponse = {
   job_id: string; status: string; params: Record<string, unknown>;
 };
 
+/* The generic job shape from api/jobs.py, used by any endpoint whose work is
+   too slow to sit inside a single request. */
+export type JobStartResponse = { job_id: string; status: string };
+
+export type Job<T> = {
+  id: string;
+  kind: string;
+  status: "queued" | "running" | "done" | "error";
+  stage: string;
+  params: Record<string, unknown>;
+  created_at: number;
+  elapsed_seconds: number | null;
+  error: string | null;
+  result: T | null;
+};
+
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   let res: Response;
   try {
@@ -552,6 +568,15 @@ export const api = {
 
   portfolioFull: (body: Record<string, unknown>, signal?: AbortSignal) =>
     post<PortfolioFullResponse>("/api/portfolio/full", body, signal),
+
+  /* The optimiser is ~5s locally but ~75s on a small cloud instance, so the
+     module submits a job and polls. Every request stays fast either way. */
+  portfolioFullStart: (body: Record<string, unknown>, signal?: AbortSignal) =>
+    post<JobStartResponse>("/api/portfolio/full/start", body, signal),
+
+  portfolioJob: (jobId: string, signal?: AbortSignal) =>
+    get<Job<PortfolioFullResponse>>(
+      `/api/portfolio/jobs/${encodeURIComponent(jobId)}`, signal),
 
   // ~50 convex solves — its own call so the rest of the page isn't held up.
   portfolioFrontierAnalytic: (body: Record<string, unknown>, signal?: AbortSignal) =>

@@ -571,6 +571,24 @@ def api_garch(req: PredictionRequest):
         raise HTTPException(500, str(e))
 
 
+# Deep-learning forecasts need requirements-ml.txt (TensorFlow + PyTorch, 4-6GB).
+# A deployment installing only requirements-core.txt is a supported setup, not a
+# broken one — so say that plainly instead of surfacing ModuleNotFoundError.
+ML_TIER_MESSAGE = (
+    "Deep-learning forecasts need the heavy ML dependency tier "
+    "(requirements-ml.txt: TensorFlow and PyTorch, 4-6GB), which is not installed "
+    "on this deployment. The ARIMA and GARCH forecasts on this page work normally."
+)
+
+
+def _is_missing_ml_dep(e: BaseException) -> bool:
+    if isinstance(e, ModuleNotFoundError):
+        return (e.name or "").split(".")[0] in {
+            "tensorflow", "keras", "torch", "xgboost", "transformers",
+        }
+    return False
+
+
 @app.post("/api/prediction/lstm")
 def api_lstm(req: PredictionRequest):
     try:
@@ -582,6 +600,9 @@ def api_lstm(req: PredictionRequest):
             "historical": series_to_records(hist, "close"),
         }
     except Exception as e:
+        if _is_missing_ml_dep(e):
+            # 503, not 500: the service is fine, this capability just isn't here.
+            raise HTTPException(503, ML_TIER_MESSAGE)
         raise HTTPException(500, str(e))
 
 
@@ -634,6 +655,8 @@ def api_prediction_studio_train(req: PredictionStudioRequest):
         ).start()
         return {"job_id": job_id, "status": "queued", "params": params}
     except Exception as e:
+        if _is_missing_ml_dep(e):
+            raise HTTPException(503, ML_TIER_MESSAGE)
         raise HTTPException(500, str(e))
 
 
@@ -743,8 +766,7 @@ class PortfolioFullRequest(BaseModel):
     rebal_days: int = 21
 
 
-@app.post("/api/portfolio/full")
-def api_portfolio_full(req: PortfolioFullRequest):
+def _portfolio_full_payload(req: PortfolioFullRequest) -> dict:
     """
     The full Portfolio page: live signals (covariance health, regime, timeline),
     the analytic efficient frontier, the regime-adaptive strategy, risk parity
@@ -752,6 +774,9 @@ def api_portfolio_full(req: PortfolioFullRequest):
 
     Optimiser maths comes from api.portfolio_analytics, which replicates the
     helpers defined inline in the Streamlit page (they are not in core/).
+
+    Shared by the synchronous endpoint and the job runner below, so both return
+    byte-identical payloads.
     """
     try:
         import api.portfolio_analytics as pa
@@ -836,6 +861,42 @@ def api_portfolio_full(req: PortfolioFullRequest):
         raise
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+@app.post("/api/portfolio/full")
+def api_portfolio_full(req: PortfolioFullRequest):
+    """Synchronous full-portfolio build. Fine on fast hardware; on a small cloud
+    instance prefer /api/portfolio/full/start, which cannot outlive a proxy."""
+    return _portfolio_full_payload(req)
+
+
+@app.post("/api/portfolio/full/start")
+def api_portfolio_full_start(req: PortfolioFullRequest):
+    """Kick off the full portfolio build. Returns a job id to poll immediately.
+
+    This work is ~5s on a developer machine and ~75s on a free-tier cloud CPU.
+    Submitting a job keeps every request fast regardless of the hardware, and
+    gives the page something to show while the optimiser runs.
+    """
+    import api.jobs as jobs
+
+    job_id = jobs.start(
+        "portfolio_full",
+        lambda: _portfolio_full_payload(req),
+        {"tickers": req.tickers, "start": req.start, "max_weight": req.max_weight},
+    )
+    return {"job_id": job_id, "status": "queued"}
+
+
+@app.get("/api/portfolio/jobs/{job_id}")
+def api_portfolio_job(job_id: str):
+    """Poll a portfolio job. Carries the full payload once status is 'done'."""
+    import api.jobs as jobs
+
+    job = jobs.get(job_id)
+    if job is None:
+        raise HTTPException(404, "Unknown job id — it may have expired after an API restart.")
+    return _json_safe(job)
 
 
 @app.post("/api/portfolio/frontier-analytic")
