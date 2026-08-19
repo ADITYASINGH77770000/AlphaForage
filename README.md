@@ -441,6 +441,11 @@ Chosen deliberately over Vercel for the Python side: several endpoints legitimat
 
 1. In Vercel → **Add New** → **Project**, import the same repository.
 2. Set **Root Directory** to `frontend` — this is the step everything else depends on.
+   Also check **Build Command** under Build & Development Settings is on its
+   default (`next build`). An earlier root `vercel.json` used to force
+   `pip install -r requirements-core.txt` here, which fails the build with
+   `externally-managed-environment`; that file is gone, but a project created
+   while it existed keeps the override in its saved settings.
 3. Framework preset auto-detects as **Next.js**. Leave the build settings alone.
 4. Add an environment variable:
 

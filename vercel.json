@@ -1,9 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pip install -r requirements-core.txt",
-  "functions": {
-    "index.py": {
-      "excludeFiles": "{tests/**,data/cache/**,data/exports/**,pytest-cache-files-*/**,.git/**,.venv/**,.venv311/**,venv/**}"
-    }
-  }
-}
