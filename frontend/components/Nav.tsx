@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "./auth/AuthProvider";
+import { api } from "@/lib/api";
 
 function Emblem() {
   return (
@@ -43,8 +44,47 @@ export function Nav() {
         ))}
       </div>
 
-      <AccountMenu />
+      <div className="flex items-center gap-3">
+        <DataModeBadge />
+        <AccountMenu />
+      </div>
     </nav>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Data-mode badge.
+
+   A platform whose entire claim is that it tells you the truth cannot show
+   synthetic prices without saying so. The engine, the maths and the honesty
+   verdicts are real either way — it is only the price series that is
+   generated — but the visitor has to be told which they are looking at, on
+   every page, not just inside the three modules that happen to render a
+   frame badge after you press Run.
+
+   Renders nothing at all when the API is serving real market data.
+   ────────────────────────────────────────────────────────────────────────── */
+function DataModeBadge() {
+  const [demo, setDemo] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    api.config()
+      .then((c) => { if (alive) setDemo(c.demo_mode); })
+      .catch(() => { if (alive) setDemo(null); });   // API down: say nothing
+    return () => { alive = false; };
+  }, []);
+
+  if (!demo) return null;
+
+  return (
+    <span
+      title="Prices are generated, not live market data. Every calculation, backtest and honesty verdict is real — only the price series is synthetic."
+      className="hidden items-center gap-1.5 rounded-full border border-forge-gold/40 bg-forge-gold/10 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-forge-gold sm:inline-flex"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-forge-gold" />
+      Demo data
+    </span>
   );
 }
 

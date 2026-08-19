@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Robot } from "../guide/Robot";
 import { useAuth } from "./AuthProvider";
+import { api } from "@/lib/api";
 
 /** Shared sign-up / sign-in form. `mode` picks which one. */
 export function AuthForm({ mode }: { mode: "signup" | "login" }) {
@@ -143,9 +144,42 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
         </p>
       </motion.div>
 
+      {/* Sign-in is the first page every visitor sees, and it has no Nav — so the
+          data-mode disclosure has to be repeated here rather than assumed. */}
+      <DemoDataNote />
+
       <p className="mx-auto mt-5 max-w-[380px] text-center text-[11.5px] leading-5 text-hazedim/70">
         Accounts are stored locally by your own AlphaForge instance. Educational
         research tool — not financial advice.
+      </p>
+    </div>
+  );
+}
+
+/** Says which data the instance serves. Renders nothing when it is real. */
+function DemoDataNote() {
+  const [demo, setDemo] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    api.config()
+      .then((c) => { if (alive) setDemo(c.demo_mode); })
+      .catch(() => { if (alive) setDemo(null); });
+    return () => { alive = false; };
+  }, []);
+
+  if (!demo) return null;
+
+  return (
+    <div className="mx-auto mt-6 max-w-[380px] rounded-[10px] border border-forge-gold/30 bg-forge-gold/[0.07] px-4 py-3">
+      <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-forge-gold">
+        <span className="h-1.5 w-1.5 rounded-full bg-forge-gold" />
+        Demo data
+      </div>
+      <p className="mt-1.5 text-[11.5px] leading-5 text-hazedim">
+        This instance runs on generated price series, not live market data. Every
+        calculation, backtest and honesty verdict is real — only the prices are
+        synthetic.
       </p>
     </div>
   );
