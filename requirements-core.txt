@@ -13,6 +13,13 @@ uvicorn>=0.30.0
 python-dotenv>=1.0.0
 loguru>=0.7.0
 
+# ── Accounts ──────────────────────────────────────────────────────────────────
+# bcrypt hashes portal passwords. psycopg is only imported when DATABASE_URL is
+# set — local development falls back to stdlib sqlite3 and never loads it, but
+# it must be installed for a deployment that keeps accounts in Postgres.
+bcrypt>=4.0.0
+psycopg[binary]>=3.1.0
+
 # ── Data ──────────────────────────────────────────────────────────────────────
 yfinance>=0.2.40
 pandas>=2.0.0

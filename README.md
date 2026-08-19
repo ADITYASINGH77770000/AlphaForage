@@ -410,29 +410,28 @@ Interactive docs at **http://localhost:8000/docs** (Swagger UI). The API is a th
 
 ## 🚢 Deployment
 
-AlphaForge deploys as **three independent services**. The portal talks to the API; the API and Streamlit share the same Python core.
+The **web portal is what gets published.** It has no data of its own, so it needs the engine alongside it — two services, not one. The Streamlit dashboard is deliberately left as a local surface.
 
 ```
 Vercel                          Render
 ┌──────────────────────┐        ┌────────────────────────┐
 │  Next.js portal      │  /api/*│  alphaforge-api        │
 │  (frontend/)         │───────▶│  FastAPI + core/       │
-│  API_URL env var     │        └────────────────────────┘
-└──────────────────────┘        ┌────────────────────────┐
-                                │  alphaforge-streamlit  │
-                                │  app/main.py           │
-                                └────────────────────────┘
+│  API_URL env var     │        │  SQLite accounts       │
+└──────────────────────┘        └────────────────────────┘
+
+        Streamlit (app/) stays local — not deployed
 ```
 
-> ⚠️ **Order matters** — deploy the API first. The portal needs its URL at build time.
+> ⚠️ **Order matters** — deploy the API first. The portal needs its URL.
 
-### 1 · API + Streamlit on Render
+### 1 · Engine on Render
 
-Both services are defined in [render.yaml](render.yaml), so one blueprint deploys them together.
+Defined in [render.yaml](render.yaml).
 
 1. Push the repo to GitHub.
 2. In Render → **New** → **Blueprint**, select the repository.
-3. Render reads `render.yaml` and proposes **alphaforge-api** and **alphaforge-streamlit**. Approve both.
+3. Render reads `render.yaml` and proposes **alphaforge-api**. Approve it.
 4. Wait for the first build (installs `requirements-core.txt` only — the ML stack is far too heavy for a free instance).
 5. Confirm the API is alive at `https://<your-api>.onrender.com/api/config`, and Swagger at `/docs`.
 
@@ -453,20 +452,32 @@ Chosen deliberately over Vercel for the Python side: several endpoints legitimat
 
 See [frontend/.env.example](frontend/.env.example) for the same variable documented locally.
 
-### Free-tier realities
+### 3 · Making accounts survive
+
+Accounts live in **SQLite** (`api/auth.py`), at whatever path `AUTH_DB_PATH` names — default `data/auth/alphaforge.db`. Any pre-existing JSON store is migrated into it automatically on first run, hashes and onboarding flags intact.
+
+**SQLite alone does not make accounts persist in the cloud.** A database is still a file, and Render's free tier has an ephemeral filesystem: the `.db` is wiped on every restart, deploy and cold start. Two ways to actually keep them:
+
+| Option | What to do |
+|---|---|
+| **Persistent disk** (simplest) | Move the service to a paid plan, uncomment the `disk:` block in `render.yaml` (mounts at `/var/data`), and set `AUTH_DB_PATH=/var/data/alphaforge.db` |
+| **Hosted Postgres** (free tiers exist) | Swap the `sqlite3` calls in `api/auth.py` for a Postgres driver. The module's public interface is small — seven functions — so this is a contained change |
+
+Until one of those is in place, treat deployed accounts as disposable.
+
+### Other things true of this deployment
 
 | | Consequence |
 |---|---|
 | **Instances sleep** after ~15 min idle | First request after a nap pays a cold start of 30s+ |
-| **Ephemeral filesystem** | `data/auth/*.json` does not survive a restart — **accounts created on the deployed portal will disappear**. Attach a paid persistent disk or move the store to a database if they must last. |
 | **No auth on data routes** | 59 of 60 API routes are reachable without a session. Anyone with the API URL can read every analytic directly. |
 | **Cookie without `secure`** | The session cookie is not HTTPS-only; see `_set_session_cookie` in `api/server.py`. |
 
-> The last two are properties of the current code, not of Render. `api/auth.py` documents its own limits in its header — read it before treating the deployed portal as private.
+> Both of the last two are properties of the current code, not of Render. `api/auth.py` documents its own limits in its header — read it before treating the deployed portal as private.
 
-### Streamlit Community Cloud (alternative)
+### Streamlit Community Cloud (optional)
 
-If you only want the Streamlit dashboard live, Community Cloud is the shortest path:
+The dashboard is not part of the deployment above. If you want it live too, Community Cloud is the shortest path:
 
 - Entrypoint: `app/main.py`
 - Dependency file: `app/requirements.txt` (already present — Community Cloud checks the entrypoint directory before the repo root)

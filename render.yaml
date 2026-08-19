@@ -1,24 +1,26 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # AlphaForge — Render blueprint
 #
-# Two Python services. The Next.js portal is deployed separately on Vercel and
-# points at the API service below through its API_URL environment variable.
+# Deploys the ENGINE only. The Next.js portal deploys separately on Vercel
+# (Root Directory = frontend) and points at this service through API_URL.
 #
-#   alphaforge-api        FastAPI engine  → https://alphaforge-api.onrender.com
-#   alphaforge-streamlit  Streamlit app   → https://alphaforge-streamlit.onrender.com
+#   alphaforge-api   FastAPI + core/  →  https://alphaforge-api.onrender.com
 #
-# Both install requirements-core.txt only: the heavy TensorFlow/PyTorch stack in
-# requirements-ml.txt will not fit a free instance and is not needed to boot.
+# The Streamlit dashboard is intentionally NOT deployed — it stays a local
+# development surface. To publish it too, add a second web service running:
+#   python -m streamlit run app/main.py --server.address 0.0.0.0 --server.port $PORT
 #
-# NOTE ON FREE INSTANCES
-#   • they sleep after ~15 minutes idle; the next request pays a cold start
-#   • the filesystem is ephemeral — data/auth/*.json does NOT survive a restart,
-#     so accounts created on the deployed portal will disappear. Attach a paid
-#     persistent disk, or move the store to a database, if accounts must last.
+# ── KEEPING ACCOUNTS ALIVE ───────────────────────────────────────────────────
+# Accounts live in SQLite at AUTH_DB_PATH. Render's FREE tier has an ephemeral
+# filesystem: the database is wiped on every restart, deploy and cold start, so
+# on a free plan accounts will NOT survive. SQLite does not change that — no
+# file survives a throwaway disk.
+#
+# To make accounts persist, move the service to a paid plan and uncomment the
+# `disk:` block. The mount path and AUTH_DB_PATH must agree.
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
-  # ── The engine. Everything else reads from this. ───────────────────────────
   - type: web
     name: alphaforge-api
     env: python
@@ -26,30 +28,23 @@ services:
     buildCommand: "pip install -r requirements-core.txt"
     startCommand: "python -m uvicorn api.server:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /api/config
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: DEMO_MODE
-        value: "true"
-      - key: LOG_LEVEL
-        value: "INFO"
-      - key: CACHE_TTL_SECONDS
-        value: "3600"
 
-  # ── The original Streamlit dashboard, unchanged. ───────────────────────────
-  - type: web
-    name: alphaforge-streamlit
-    env: python
-    plan: free
-    buildCommand: "pip install -r requirements-core.txt"
-    startCommand: "python -m streamlit run app/main.py --server.address 0.0.0.0 --server.port $PORT --server.headless true"
-    healthCheckPath: /
+    # Uncomment together with a paid plan to make accounts survive restarts.
+    # disk:
+    #   name: alphaforge-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
+
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: DEMO_MODE
         value: "true"
-      - key: CACHE_TTL_SECONDS
-        value: "3600"
       - key: LOG_LEVEL
         value: "INFO"
+      - key: CACHE_TTL_SECONDS
+        value: "3600"
+      # With the disk above mounted, change this to /var/data/alphaforge.db so
+      # the account database sits on persistent storage.
+      - key: AUTH_DB_PATH
+        value: "data/auth/alphaforge.db"
