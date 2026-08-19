@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "./auth/AuthProvider";
 import { api } from "@/lib/api";
 
@@ -29,25 +30,87 @@ const LINKS = [
 ];
 
 export function Nav() {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Navigating away must close the sheet, or it covers the page you asked for.
+  useEffect(() => { setOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
-    <nav className="fixed inset-x-0 top-0 z-40 flex items-center justify-between px-6 py-4 backdrop-blur-sm sm:px-10">
-      <Link href="/" className="hv-btn flex items-center gap-2.5">
-        <Emblem />
-        <span className="font-mono text-sm font-bold tracking-wide text-white">AlphaForge</span>
-      </Link>
+    <nav className="fixed inset-x-0 top-0 z-40 backdrop-blur-sm">
+      <div className="flex items-center justify-between px-6 py-4 sm:px-10">
+        <Link href="/" className="hv-btn flex items-center gap-2.5">
+          <Emblem />
+          <span className="font-mono text-sm font-bold tracking-wide text-white">AlphaForge</span>
+        </Link>
 
-      <div className="hidden items-center gap-8 font-mono text-xs uppercase tracking-widest text-haze lg:flex">
-        {LINKS.map((l) => (
-          <Link key={l.href} href={l.href} className="hv-link hover:text-forge-cyan">
-            {l.label}
-          </Link>
-        ))}
+        <div className="hidden items-center gap-8 font-mono text-xs uppercase tracking-widest text-haze lg:flex">
+          {LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className="hv-link hover:text-forge-cyan">
+              {l.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <DataModeBadge />
+          <AccountMenu />
+          {/* Below lg the links above are hidden, so without this the Features
+              and About pages are unreachable on a phone entirely. */}
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/12 text-haze hover:border-forge-cyan hover:text-forge-cyan lg:hidden"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2" strokeLinecap="round" aria-hidden>
+              {open
+                ? <><path d="M6 6l12 12" /><path d="M18 6L6 18" /></>
+                : <><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></>}
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <DataModeBadge />
-        <AccountMenu />
-      </div>
+      {open && (
+        <div id="mobile-nav" className="lg:hidden">
+          {/* Tapping anywhere outside closes, which is what a phone user expects
+              far more than hunting for the X. */}
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 -z-10 h-screen w-screen cursor-default bg-ink/60"
+          />
+          <div className="mx-4 mb-4 rounded-[14px] border border-white/12 bg-panel/95 p-2 shadow-2xl backdrop-blur-xl">
+            {LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className={`block rounded-[10px] px-4 py-3 font-mono text-[13px] uppercase tracking-widest transition-colors ${
+                  pathname === l.href
+                    ? "bg-white/[0.06] text-forge-cyan"
+                    : "text-haze hover:bg-white/[0.04] hover:text-forge-cyan"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
@@ -80,10 +143,12 @@ function DataModeBadge() {
   return (
     <span
       title="Prices are generated, not live market data. Every calculation, backtest and honesty verdict is real — only the price series is synthetic."
-      className="hidden items-center gap-1.5 rounded-full border border-forge-gold/40 bg-forge-gold/10 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-forge-gold sm:inline-flex"
+      className="inline-flex items-center gap-1.5 rounded-full border border-forge-gold/40 bg-forge-gold/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-forge-gold sm:px-3"
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-forge-gold" />
-      Demo data
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-forge-gold" />
+      {/* Phones get the short label so the bar still fits at 360px wide. */}
+      <span className="sm:hidden">Demo</span>
+      <span className="hidden sm:inline">Demo data</span>
     </span>
   );
 }
