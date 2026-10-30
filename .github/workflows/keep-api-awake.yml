@@ -1,18 +1,19 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Keeps the Render free instance from hibernating.
+# Best-effort ping of the Render free instance. It does NOT keep it awake.
 #
-# Render spins a free web service down after ~15 minutes without traffic. Waking
-# it again takes 60-90 seconds, and sometimes fails outright with
-# `x-render-routing: hibernate-wake-error` — which is what makes the portal's
-# login return 503: the browser gives up long before the API answers.
+# Render spins a free web service down after ~15 minutes without traffic, and
+# waking it takes 60-90 seconds. This workflow asks for a run every 10 minutes,
+# but GitHub delays scheduled runs heavily on the free tier: across 200 runs
+# (Sep-Oct 2026) the median gap was about four hours and none was under 15
+# minutes, so the service still sleeps between pings.
 #
-# Pinging every 10 minutes keeps it warm. One always-on free service uses about
-# 730 of the 750 free instance-hours in a month, so this fits the quota — but
-# only just, and only while this is the ONLY free service on the account.
+# The portal copes with a sleeping API on its own; see frontend/lib/wake.ts. To
+# really keep it warm, use an external pinger on a 5-10 minute interval, or a
+# paid instance. One always-on free service uses about 730 of the 750 free
+# instance-hours in a month, so that fits only while it is the ONLY free service.
 #
-# Actions minutes are unlimited on public repositories, so this costs nothing.
-# GitHub disables scheduled workflows after 60 days of repository inactivity;
-# push anything, or run it manually, to re-enable.
+# GitHub also disables scheduled workflows after 60 days without a push, which
+# happened on 2026-10-23. Push anything, or enable it again in the Actions tab.
 # ─────────────────────────────────────────────────────────────────────────────
 name: Keep API awake
 

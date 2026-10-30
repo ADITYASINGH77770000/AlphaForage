@@ -3,13 +3,18 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { SiteGate } from "@/components/auth/SiteGate";
+import { WakeNotice } from "@/components/auth/WakeNotice";
 import { GuideBot } from "@/components/guide/GuideBot";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
+// Share previews need an absolute image URL that works from anywhere, so this has
+// to be the deployed host. Vercel provides it at build time.
+const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+
 export const metadata: Metadata = {
-  metadataBase: new URL("http://localhost:3000"),
+  metadataBase: new URL(productionHost ? `https://${productionHost}` : "http://localhost:3000"),
   title: "AlphaForge — The quant platform that tells you the truth",
   description:
     "AlphaForge tests trading strategies honestly, with real costs and out-of-sample validation, then gives a blunt verdict on whether the edge is real or an overfit illusion — before you risk a rupee.",
@@ -31,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`}>
       <body className="grain antialiased">
+        <WakeNotice />
         <AuthProvider>
           {/* Nothing renders without a session except /login and /signup. */}
           <SiteGate>
