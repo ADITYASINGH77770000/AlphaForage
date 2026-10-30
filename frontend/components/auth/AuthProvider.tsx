@@ -1,6 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  ApiUnreachableError, ensureAwake, isGatewayFailure, isUnreachable, noteFailure, noteResponse,
+} from "@/lib/wake";
 
 /* ──────────────────────────────────────────────────────────────────────────
    Session state for the whole app.
@@ -24,6 +27,10 @@ type AuthState = {
   user: User | null;
   /** true until the first /me check resolves — guards flash-of-logged-out. */
   loading: boolean;
+  /** The service could not be reached, which is not the same as signed out. */
+  offline: boolean;
+  /** Asks again after `offline`. */
+  retry: () => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -32,14 +39,24 @@ type AuthState = {
 
 const Ctx = createContext<AuthState | null>(null);
 
+/** Waits out a sleeping backend first — see lib/wake.ts — then asks once. */
 async function call<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(path, {
-    method: body ? "POST" : "GET",
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: "include",
-    cache: "no-store",
-  });
+  await ensureAwake();
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method: body ? "POST" : "GET",
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: "include",
+      cache: "no-store",
+    });
+  } catch {
+    noteFailure();
+    throw new ApiUnreachableError();
+  }
+  noteResponse(res);
+  if (isGatewayFailure(res)) throw new ApiUnreachableError();
   if (!res.ok) {
     let detail = `Request failed (${res.status})`;
     try {
@@ -56,28 +73,40 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       const r = await call<{ user: User | null }>("/api/auth/me");
       setUser(r.user);
-    } catch {
-      setUser(null);   // API down — treat as signed out rather than crashing
+      setOffline(false);
+    } catch (e) {
+      setUser(null);
+      // Keeps the portal from reporting a signed-out session when all it really
+      // knows is that it could not ask.
+      setOffline(isUnreachable(e));
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const retry = useCallback(async () => {
+    setLoading(true);
+    await refresh();
+  }, [refresh]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
   const signup = useCallback(async (name: string, email: string, password: string) => {
     const r = await call<{ user: User }>("/api/auth/signup", { name, email, password });
     setUser(r.user);
+    setOffline(false);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const r = await call<{ user: User }>("/api/auth/login", { email, password });
     setUser(r.user);
+    setOffline(false);
   }, []);
 
   const logout = useCallback(async () => {
@@ -100,8 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signup, login, logout, markOnboarded }),
-    [user, loading, signup, login, logout, markOnboarded]
+    () => ({ user, loading, offline, retry, signup, login, logout, markOnboarded }),
+    [user, loading, offline, retry, signup, login, logout, markOnboarded]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

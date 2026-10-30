@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Icosahedron, MeshDistortMaterial, Torus } from "@react-three/drei";
 import { EffectComposer, Bloom, ChromaticAberration } from "@react-three/postprocessing";
@@ -159,7 +159,43 @@ function Rig() {
   return null;
 }
 
+/**
+ * WebGL can be missing or blocked, and on machines without a usable GPU it falls
+ * back to software rendering that would freeze the page. The caveat flag turns
+ * that second case into a plain "no", so both end up with the static hero.
+ */
+function hasUsableWebGL(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    const options = { failIfMajorPerformanceCaveat: true };
+    return !!(canvas.getContext("webgl2", options) || canvas.getContext("webgl", options));
+  } catch {
+    return false;
+  }
+}
+
+/** The scene is decoration: if it fails after starting, drop it and keep the page. */
+class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 export default function ForgeScene() {
+  // This module is client-only (ssr: false in Hero), so it can read the device now.
+  const [usable] = useState(hasUsableWebGL);
+  return usable ? (
+    <SceneBoundary>
+      <Scene />
+    </SceneBoundary>
+  ) : null;
+}
+
+function Scene() {
   // Device tier decides particle count + whether to run post-processing.
   const [lowPower, setLowPower] = useState(false);
   useEffect(() => {

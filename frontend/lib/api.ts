@@ -7,6 +7,10 @@
    in the Python core.
    ────────────────────────────────────────────────────────────────────────── */
 
+import {
+  ensureAwake, isGatewayFailure, isUnreachable, noteFailure, noteResponse, SERVICE_DOWN,
+} from "./wake";
+
 export type Config = {
   tickers: string[];
   demo_mode: boolean;
@@ -91,18 +95,32 @@ export class ApiError extends Error {
   }
 }
 
+/** Waits out a sleeping backend; see lib/wake.ts. Requests are never retried. */
+async function awake(signal?: AbortSignal): Promise<void> {
+  try {
+    await ensureAwake(signal);
+  } catch (e) {
+    throw isUnreachable(e) ? new ApiError(e.message) : e;
+  }
+}
+
+/** A gateway's page says nothing useful, so give the reader something that does. */
+const failureText = (res: Response) =>
+  isGatewayFailure(res) ? SERVICE_DOWN : `Request failed (${res.status})`;
+
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  await awake(signal);
   let res: Response;
   try {
     res = await fetch(path, { signal, cache: "no-store" });
   } catch (e) {
     if ((e as Error)?.name === "AbortError") throw e;
-    throw new ApiError(
-      "Can't reach the AlphaForge API. Is the Python service running on port 8000?"
-    );
+    noteFailure();
+    throw new ApiError(SERVICE_DOWN);
   }
+  noteResponse(res);
   if (!res.ok) {
-    let detail = `Request failed (${res.status})`;
+    let detail = failureText(res);
     try {
       const body = await res.json();
       if (body?.detail) detail = String(body.detail);
@@ -469,6 +487,7 @@ export type Job<T> = {
 };
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  await awake(signal);
   let res: Response;
   try {
     res = await fetch(path, {
@@ -479,10 +498,12 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promi
     });
   } catch (e) {
     if ((e as Error)?.name === "AbortError") throw e;
-    throw new ApiError("Can't reach the AlphaForge API. Is the Python service running on port 8000?");
+    noteFailure();
+    throw new ApiError(SERVICE_DOWN);
   }
+  noteResponse(res);
   if (!res.ok) {
-    let detail = `Request failed (${res.status})`;
+    let detail = failureText(res);
     try {
       const b = await res.json();
       if (b?.detail) detail = String(b.detail);
